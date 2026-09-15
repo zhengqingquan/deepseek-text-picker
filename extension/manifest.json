@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "DeepSeek Text Picker",
+  "version": "0.1.0",
+  "description": "在 DeepSeek 聊天页显示与官方复制一致的 Markdown 原文（读取页面本地 store）",
+  "content_scripts": [
+    {
+      "matches": ["https://chat.deepseek.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://chat.deepseek.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

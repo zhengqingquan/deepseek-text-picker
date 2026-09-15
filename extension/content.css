@@ -1,0 +1,139 @@
+/* 挂入官方操作栏时，显隐由站点 toolbar opacity 控制；以下仅兜底 */
+
+.dspicker-trigger-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  will-change: opacity;
+}
+
+[data-virtual-list-item-key]:hover .dspicker-trigger-wrap,
+[data-virtual-list-item-key]:focus-within .dspicker-trigger-wrap,
+.dspicker-trigger-wrap:focus-within {
+  opacity: 1;
+}
+
+.dspicker-trigger.ds-button {
+  cursor: pointer;
+}
+
+.dspicker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 17, 20, 0.45);
+}
+
+.dspicker-overlay[hidden] {
+  display: none !important;
+}
+
+.dspicker-modal {
+  width: min(720px, 100%);
+  max-height: min(80vh, 720px);
+  display: flex;
+  flex-direction: column;
+  background: #f7f8fa;
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  color: #0f1114;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.dspicker-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(15, 17, 20, 0.08);
+  background: #fff;
+  min-height: 44px;
+}
+
+.dspicker-tabs {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.dspicker-tabs[hidden] {
+  display: none !important;
+}
+
+.dspicker-tab {
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: rgba(15, 17, 20, 0.55);
+}
+
+.dspicker-tab.is-active {
+  background: rgba(15, 17, 20, 0.06);
+  color: #0f1114;
+  font-weight: 600;
+}
+
+.dspicker-tab[hidden] {
+  display: none !important;
+}
+
+.dspicker-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dspicker-btn {
+  border: 1px solid rgba(15, 17, 20, 0.16);
+  background: #0f1114;
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dspicker-btn-ghost {
+  background: #fff;
+  color: #0f1114;
+}
+
+.dspicker-btn:hover {
+  filter: brightness(1.05);
+}
+
+.dspicker-body {
+  margin: 0;
+  padding: 14px 16px 18px;
+  overflow: auto;
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.55;
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+  background: #f7f8fa;
+}
+
+.dspicker-status {
+  font-size: 12px;
+  color: #1a7f37;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dspicker-status[hidden] {
+  display: none !important;
+}
