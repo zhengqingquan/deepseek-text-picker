@@ -131,14 +131,9 @@
     status.hidden = true;
     status.textContent = "";
 
-    state.main = "加载中…";
-    state.think = "";
     state.active = "main";
-    tabs.hidden = true;
     mainTab.classList.add("is-active");
     thinkTab.classList.remove("is-active");
-    body.textContent = state.main;
-    root.hidden = false;
 
     try {
       const result = await resolveRaw(id);
@@ -164,6 +159,7 @@
     const hasThink = Boolean(state.think);
     tabs.hidden = !hasThink;
     body.textContent = state.active === "think" ? state.think : state.main;
+    root.hidden = false;
   }
 
   function isAssistantItem(item) {
