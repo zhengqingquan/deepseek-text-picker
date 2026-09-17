@@ -1,6 +1,6 @@
 # DeepSeek Text Picker
 
-Chrome / Edge 扩展（v0.1.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回答旁显示「原文」图标，展示与官方「复制」一致的 Markdown。
+Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回答旁显示「原文」图标，展示与官方「复制」一致的 Markdown。
 
 ## 原理
 
@@ -8,12 +8,27 @@ Chrome / Edge 扩展（v0.1.0）：在 [chat.deepseek.com](https://chat.deepseek
 
 ## 安装（开发者模式）
 
-1. 打开 Chrome / Edge，进入 `chrome://extensions`（或 `edge://extensions`）
-2. 开启「开发者模式」
-3. 「加载已解压的扩展程序」，选择本仓库的 `extension` 目录
-4. 打开或刷新 DeepSeek 聊天页
+### 从 Release 下载（推荐）
 
-修改代码后：在扩展页点「重新加载」，再刷新聊天页即可。
+1. 打开 [Releases](https://github.com/zhengqingquan/deepseek-text-picker/releases)，下载 `deepseek-text-picker-x.y.z.zip`
+2. 解压到任意目录
+3. 打开 Chrome / Edge，进入 `chrome://extensions`（或 `edge://extensions`）
+4. 开启「开发者模式」→「加载已解压的扩展程序」→ 选择解压后的目录（内含 `manifest.json`）
+5. 打开或刷新 DeepSeek 聊天页
+
+### 从源码目录
+
+1. 打开 Chrome / Edge 扩展管理页，开启开发者模式
+2. 「加载已解压的扩展程序」，选择本仓库的 `extension` 目录
+3. 打开或刷新 DeepSeek 聊天页
+
+修改代码后：在扩展页点「重新加载」，再刷新聊天页即可。本地打包可用：
+
+```powershell
+.\scripts\pack-extension.ps1
+```
+
+产物在 `dist/deepseek-text-picker-<version>.zip`。
 
 ## 使用
 
@@ -31,4 +46,7 @@ extension/
   inject.js      # MAIN world：读取页面本地 store
   content.js     # UI 与通信
   content.css
+  icons/         # 扩展图标
+scripts/
+  pack-extension.ps1  # 打成 Release 用 zip
 ```

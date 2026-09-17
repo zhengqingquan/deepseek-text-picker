@@ -3,6 +3,7 @@
 
 # Local scratch
 temp/
+dist/
 
 # Env & secrets
 .env
