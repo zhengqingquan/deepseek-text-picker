@@ -74,8 +74,13 @@
     };
     root.__dspState = state;
 
+    let backdropPointerDown = false;
+    root.addEventListener("pointerdown", (e) => {
+      backdropPointerDown = e.target === root;
+    });
     root.addEventListener("click", (e) => {
-      if (e.target === root) closeModal();
+      if (e.target === root && backdropPointerDown) closeModal();
+      backdropPointerDown = false;
     });
 
     root.querySelector('[data-action="close"]').addEventListener("click", closeModal);
