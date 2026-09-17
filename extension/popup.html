@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeepSeek Text Picker</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="header">
+      <img class="header__icon" src="icons/icon48.png" width="28" height="28" alt="" />
+      <div class="header__text">
+        <div class="header__title">DeepSeek Text Picker</div>
+        <div class="header__sub" id="version">—</div>
+      </div>
+    </header>
+
+    <nav class="menu" aria-label="扩展菜单">
+      <p class="menu__tip">
+        在 DeepSeek 回答旁点击
+        <span class="menu__tip-icon" title="原文图标" aria-label="原文图标">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M3.5 1.5A1.5 1.5 0 0 1 5 0h4.293L13 3.707V14.5A1.5 1.5 0 0 1 11.5 16h-6A1.5 1.5 0 0 1 4 14.5v-13Zm5 .5V4h2.5L8.5 2ZM5.25 7a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Zm0 3a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Z"
+            />
+          </svg>
+        </span>
+        查看 Markdown 原文。
+      </p>
+
+      <div class="menu__divider" role="separator"></div>
+
+      <button type="button" class="menu__item" data-url="https://chat.deepseek.com/">
+        <span class="menu__label">打开 DeepSeek</span>
+        <span class="menu__ext" title="在新标签页打开" aria-hidden="true"></span>
+      </button>
+      <button
+        type="button"
+        class="menu__item"
+        data-url="https://github.com/zhengqingquan/deepseek-text-picker"
+      >
+        <span class="menu__label">GitHub 仓库</span>
+        <span class="menu__ext" title="在新标签页打开" aria-hidden="true"></span>
+      </button>
+      <button
+        type="button"
+        class="menu__item"
+        data-url="https://github.com/zhengqingquan/deepseek-text-picker/releases"
+      >
+        <span class="menu__label">查看更新</span>
+        <span class="menu__ext" title="在新标签页打开" aria-hidden="true"></span>
+      </button>
+
+      <div class="menu__divider" role="separator"></div>
+
+      <button
+        type="button"
+        class="menu__item menu__item--accent"
+        data-url="https://zhengqingquan.github.io/donate-page/"
+      >
+        <span class="menu__label">打赏支持</span>
+        <span class="menu__ext" title="在新标签页打开" aria-hidden="true"></span>
+      </button>
+    </nav>
+    <script src="popup.js"></script>
+  </body>
+</html>
