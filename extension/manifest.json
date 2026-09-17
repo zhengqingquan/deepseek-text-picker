@@ -9,7 +9,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "打赏支持",
+    "default_title": "DeepSeek Text Picker",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
