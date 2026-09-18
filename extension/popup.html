@@ -10,18 +10,22 @@
     <header class="header">
       <img class="header__icon" src="icons/icon48.png" width="28" height="28" alt="" />
       <div class="header__text">
-        <div class="header__title">DeepSeek Text Picker</div>
+        <div class="header__title" data-i18n="extName">DeepSeek Text Picker</div>
         <div class="header__sub" id="version">—</div>
       </div>
     </header>
 
-    <nav class="menu" aria-label="扩展菜单">
+    <nav class="menu" data-i18n-aria-label="popupMenuAria">
       <div class="menu__tip">
-        <p class="menu__tip-lead">在 DeepSeek 的回答底部：</p>
+        <p class="menu__tip-lead" data-i18n="popupTipLead"></p>
         <ol class="menu__tip-list">
           <li>
-            点击
-            <span class="menu__tip-icon" title="导出会话" aria-label="导出会话">
+            <span data-i18n="popupTipClick"></span>
+            <span
+              class="menu__tip-icon"
+              data-i18n-title="exportSession"
+              data-i18n-aria-label="exportSession"
+            >
               <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                 <path
                   fill="currentColor"
@@ -29,11 +33,15 @@
                 />
               </svg>
             </span>
-            可以导出会话为 Markdown。
+            <span data-i18n="popupTipExportSuffix"></span>
           </li>
           <li>
-            点击
-            <span class="menu__tip-icon" title="显示原文" aria-label="显示原文">
+            <span data-i18n="popupTipClick"></span>
+            <span
+              class="menu__tip-icon"
+              data-i18n-title="showOriginal"
+              data-i18n-aria-label="showOriginal"
+            >
               <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                 <path
                   fill="currentColor"
@@ -41,7 +49,7 @@
                 />
               </svg>
             </span>
-            可以查看 Markdown 原文。
+            <span data-i18n="popupTipOriginalSuffix"></span>
           </li>
         </ol>
       </div>
@@ -49,24 +57,24 @@
       <div class="menu__divider" role="separator"></div>
 
       <button type="button" class="menu__item" data-url="https://chat.deepseek.com/">
-        <span class="menu__label">打开 DeepSeek</span>
-        <span class="menu__ext" title="在新标签页打开" aria-hidden="true"></span>
+        <span class="menu__label" data-i18n="openDeepSeek"></span>
+        <span class="menu__ext" data-i18n-title="openInNewTab" aria-hidden="true"></span>
       </button>
       <button
         type="button"
         class="menu__item"
         data-url="https://github.com/zhengqingquan/deepseek-text-picker"
       >
-        <span class="menu__label">GitHub 仓库</span>
-        <span class="menu__ext" title="在新标签页打开" aria-hidden="true"></span>
+        <span class="menu__label" data-i18n="githubRepo"></span>
+        <span class="menu__ext" data-i18n-title="openInNewTab" aria-hidden="true"></span>
       </button>
       <button
         type="button"
         class="menu__item"
         data-url="https://github.com/zhengqingquan/deepseek-text-picker/releases"
       >
-        <span class="menu__label">查看更新</span>
-        <span class="menu__ext" title="在新标签页打开" aria-hidden="true"></span>
+        <span class="menu__label" data-i18n="viewReleases"></span>
+        <span class="menu__ext" data-i18n-title="openInNewTab" aria-hidden="true"></span>
       </button>
 
       <div class="menu__divider" role="separator"></div>
@@ -76,8 +84,8 @@
         class="menu__item menu__item--accent"
         data-url="https://zhengqingquan.github.io/donate-page/"
       >
-        <span class="menu__label">打赏支持</span>
-        <span class="menu__ext" title="在新标签页打开" aria-hidden="true"></span>
+        <span class="menu__label" data-i18n="donate"></span>
+        <span class="menu__ext" data-i18n-title="openInNewTab" aria-hidden="true"></span>
       </button>
     </nav>
     <script src="popup.js"></script>

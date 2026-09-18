@@ -4,9 +4,14 @@
 
 ## [Unreleased]
 
+### 新增
+
+- 多语言：Chrome `_locales` + `chrome.i18n`（默认 `zh_CN`，另提供 `en`）；界面跟随浏览器 UI 语言
+
 ### 修复
 
 - 导出会话默认勾选到末条时改为写入 `selectedMessages: "all"`，底部「全选」同步勾选（此前写入完整 id 数组时各条已勾但底栏未勾）
+- 修复导出会话卡死：底栏补丁勿在每次 `patchNativeShareBar` 重写 `textContent`（会触发 MutationObserver 死循环）
 
 ### 变更
 

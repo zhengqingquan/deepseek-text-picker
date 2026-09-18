@@ -4,6 +4,17 @@
   /** @type {Map<number, {resolve: Function, reject: Function, timer: number}>} */
   const pending = new Map();
 
+  /** Chrome i18n；缺 key 时回退到 key 本身，便于发现漏译 */
+  function t(key, substitutions) {
+    try {
+      const msg = chrome.i18n.getMessage(key, substitutions);
+      if (msg) return msg;
+    } catch (_) {
+      /* ignore */
+    }
+    return key;
+  }
+
   function postRequest(type, extra, timeoutMs) {
     const reqId = ++reqSeq;
     return new Promise((resolve, reject) => {
@@ -89,7 +100,7 @@
       .trim()
       .replace(/<\/details>/gi, "<\\/details>");
     if (!text) return "";
-    return `<details>\n<summary>思考</summary>\n\n${text}\n\n</details>`;
+    return `<details>\n<summary>${t("thinkSummary")}</summary>\n\n${text}\n\n</details>`;
   }
 
   function ensureModal() {
@@ -98,20 +109,20 @@
     root.className = "dspicker-overlay";
     root.hidden = true;
     root.innerHTML = `
-      <div class="dspicker-modal" role="dialog" aria-modal="true" aria-label="消息原文">
+      <div class="dspicker-modal" role="dialog" aria-modal="true" aria-label="${t("dialogOriginal")}">
         <div class="dspicker-header">
           <div class="dspicker-tabs" role="tablist" hidden>
-            <button type="button" class="dspicker-tab is-active" data-tab="main">原文</button>
-            <button type="button" class="dspicker-tab" data-tab="think">思考</button>
+            <button type="button" class="dspicker-tab is-active" data-tab="main">${t("tabOriginal")}</button>
+            <button type="button" class="dspicker-tab" data-tab="think">${t("tabThink")}</button>
           </div>
           <label class="dspicker-check" data-role="include-think-wrap" hidden>
             <input type="checkbox" data-action="include-think" />
-            <span>包含深度思考</span>
+            <span>${t("includeThink")}</span>
           </label>
           <div class="dspicker-status" hidden></div>
           <div class="dspicker-actions">
-            <button type="button" class="dspicker-btn" data-action="copy">复制</button>
-            <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="close" aria-label="关闭">关闭</button>
+            <button type="button" class="dspicker-btn" data-action="copy">${t("copy")}</button>
+            <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="close" aria-label="${t("close")}">${t("close")}</button>
           </div>
         </div>
         <pre class="dspicker-body" tabindex="0"></pre>
@@ -161,14 +172,14 @@
       try {
         await navigator.clipboard.writeText(text);
         status.hidden = false;
-        status.textContent = "已复制";
+        status.textContent = t("copied");
         status.classList.remove("is-error");
         setTimeout(() => {
           status.hidden = true;
         }, 3000);
       } catch (_) {
         status.hidden = false;
-        status.textContent = "复制失败，请手动全选复制";
+        status.textContent = t("copyFailed");
         status.classList.add("is-error");
       }
     });
@@ -224,21 +235,20 @@
     try {
       const result = await resolveRaw(id);
       if (!result || !result.ok) {
-        state.main =
-          "未从页面内存读到原文。请确认该条回答已显示完整，或刷新后重试。";
+        state.main = t("resolveFailed");
         state.think = "";
       } else {
         const role = String(result.role || "").toUpperCase();
         if (role === "USER") {
-          state.main = "仅支持查看 DeepSeek 回答的原文。";
+          state.main = t("userOnlyUnsupported");
           state.think = "";
         } else {
-          state.main = result.response || "(空)";
+          state.main = result.response || t("emptyContent");
           state.think = result.think || "";
         }
       }
     } catch (_) {
-      state.main = "读取原文超时，请刷新页面后重试。";
+      state.main = t("resolveTimeout");
       state.think = "";
     }
 
@@ -251,15 +261,15 @@
 
   /* ---------------- UI: 导出会话（复用官方分享选对话） ---------------- */
 
-  const EXPORT_CONFIRM_LABEL = "创建导出内容";
   const SHARE_CONFIRM_RE =
-    /创建公开链接|Create public link|Create link|Create and copy|创建并复制|确认并复制|Copy link|Confirm and copy/i;
+    /创建公开链接|Create public link|Create link|Create and copy|创建并复制|确认并复制|Copy link|Confirm and copy|创建导出内容|Create export/i;
   const SHARE_CANCEL_RE = /^(取消|Cancel)$/i;
 
-  /** @type {{ hijack: boolean, patching: boolean, seenSelecting: boolean, observer: MutationObserver|null, pollTimer: number, docClickBound: boolean, untilMessageId: string|null }} */
+  /** @type {{ hijack: boolean, patching: boolean, patchingBar: boolean, seenSelecting: boolean, observer: MutationObserver|null, pollTimer: number, docClickBound: boolean, untilMessageId: string|null }} */
   const exportFlow = {
     hijack: false,
     patching: false,
+    patchingBar: false,
     seenSelecting: false,
     observer: null,
     pollTimer: 0,
@@ -288,13 +298,13 @@
     const title =
       payload && payload.title && String(payload.title).trim()
         ? String(payload.title).trim()
-        : "DeepSeek 对话";
+        : t("defaultChatTitle");
     const lines = [`# ${title}`, ""];
     const messages = (payload && payload.messages) || [];
     for (const msg of messages) {
       const role = String(msg.role || "").toUpperCase();
       if (role === "USER") {
-        lines.push(exportHeading("用户", msg), "", msg.content || "", "");
+        lines.push(exportHeading(t("roleUser"), msg), "", msg.content || "", "");
       } else {
         lines.push(exportHeading("DeepSeek", msg), "");
         if (includeThink) {
@@ -439,7 +449,7 @@
       const sel = await getExportSelectionRaw();
       if (!sel || !sel.ok) {
         await stopExportHijack();
-        openExportModalError("未能读取已选对话，请重试。");
+        openExportModalError(t("exportReadFailed"));
         return;
       }
       const ids = Array.isArray(sel.messageIds) ? sel.messageIds : [];
@@ -452,8 +462,8 @@
         await stopExportHijack();
         openExportModalError(
           result && result.error === "empty"
-            ? "当前没有可导出的已选消息。"
-            : "导出会话失败，请刷新后重试。"
+            ? t("exportNoSelection")
+            : t("exportFailed")
         );
         return;
       }
@@ -461,7 +471,7 @@
       openExportModal(result, { canReturn: true });
     } catch (_) {
       await stopExportHijack();
-      openExportModalError("导出会话超时，请刷新页面后重试。");
+      openExportModalError(t("exportTimeout"));
     } finally {
       exportFlow.patching = false;
     }
@@ -477,12 +487,13 @@
   function ensureConfirmLayer() {
     let layer = document.querySelector(".dspicker-export-confirm-layer");
     if (layer) return layer;
+    const label = t("createExportContent");
     layer = document.createElement("div");
     layer.className = "dspicker-export-confirm-layer";
     layer.hidden = true;
     layer.innerHTML =
-      `<button type="button" class="dspicker-export-confirm-cover" aria-label="${EXPORT_CONFIRM_LABEL}">` +
-      `${EXPORT_CONFIRM_LABEL}` +
+      `<button type="button" class="dspicker-export-confirm-cover" aria-label="${label}">` +
+      `${label}` +
       `</button>`;
     document.documentElement.appendChild(layer);
     return layer;
@@ -537,46 +548,57 @@
 
   /** 隐藏官方确认按钮，独立按钮对齐其位置与外观 */
   function patchNativeShareBar() {
-    if (!exportFlow.hijack) return;
-    // 预览弹层打开时仍保持底栏补丁（按钮在遮罩下方），返回后无需重建
+    if (!exportFlow.hijack || exportFlow.patchingBar) return;
+    exportFlow.patchingBar = true;
+    try {
+      // 预览弹层打开时仍保持底栏补丁（按钮在遮罩下方），返回后无需重建
 
-    let natives = findNativeCreateLinkButtons();
-    if (!natives.length) {
-      document.querySelectorAll(".ds-button--primary").forEach((el) => {
-        if (el.closest(".dspicker-export-confirm-layer, .dspicker-overlay")) return;
-        const r = el.getBoundingClientRect();
-        if (r.width >= 48 && r.height >= 28 && r.bottom > window.innerHeight - 110) {
-          natives.push(el);
-        }
-      });
+      let natives = findNativeCreateLinkButtons();
+      if (!natives.length) {
+        document.querySelectorAll(".ds-button--primary").forEach((el) => {
+          if (el.closest(".dspicker-export-confirm-layer, .dspicker-overlay")) return;
+          const r = el.getBoundingClientRect();
+          if (r.width >= 48 && r.height >= 28 && r.bottom > window.innerHeight - 110) {
+            natives.push(el);
+          }
+        });
+      }
+
+      const layer = ensureConfirmLayer();
+      if (!natives.length) {
+        layer.hidden = true;
+        return;
+      }
+
+      const target =
+        natives.find((el) => {
+          const r = el.getBoundingClientRect();
+          return r.bottom > window.innerHeight - 120 && r.width > 0;
+        }) || natives[0];
+      const rect = target.getBoundingClientRect();
+      if (rect.width < 8 || rect.height < 8) {
+        layer.hidden = true;
+        return;
+      }
+
+      const cover = layer.querySelector(".dspicker-export-confirm-cover");
+      const label = t("createExportContent");
+      // 勿每次写 textContent：会触发 childList MutationObserver → 死循环卡死页面
+      if (cover.textContent !== label) {
+        cover.textContent = label;
+        cover.setAttribute("aria-label", label);
+      }
+      applyNativeButtonLook(cover, target);
+      hideNativeCreateButtons(natives);
+
+      layer.hidden = false;
+      cover.style.left = Math.round(rect.left) + "px";
+      cover.style.top = Math.round(rect.top) + "px";
+      cover.style.width = Math.round(rect.width) + "px";
+      cover.style.height = Math.round(rect.height) + "px";
+    } finally {
+      exportFlow.patchingBar = false;
     }
-
-    const layer = ensureConfirmLayer();
-    if (!natives.length) {
-      layer.hidden = true;
-      return;
-    }
-
-    const target =
-      natives.find((el) => {
-        const r = el.getBoundingClientRect();
-        return r.bottom > window.innerHeight - 120 && r.width > 0;
-      }) || natives[0];
-    const rect = target.getBoundingClientRect();
-    if (rect.width < 8 || rect.height < 8) {
-      layer.hidden = true;
-      return;
-    }
-
-    const cover = layer.querySelector(".dspicker-export-confirm-cover");
-    applyNativeButtonLook(cover, target);
-    hideNativeCreateButtons(natives);
-
-    layer.hidden = false;
-    cover.style.left = Math.round(rect.left) + "px";
-    cover.style.top = Math.round(rect.top) + "px";
-    cover.style.width = Math.round(rect.width) + "px";
-    cover.style.height = Math.round(rect.height) + "px";
   }
 
   function ensureDocClickHijack() {
@@ -635,10 +657,10 @@
         const err = begun && begun.error;
         openExportModalError(
           err === "no_session"
-            ? "当前不在会话页。请打开具体聊天后再导出。"
+            ? t("exportNoSession")
             : err === "no_share_api"
-              ? "未能接入页面分享选对话。请刷新后重试，或确认 DeepSeek 页面已加载完成。"
-              : "无法进入选对话，请刷新后重试。"
+              ? t("exportNoShareApi")
+              : t("exportEnterFailed")
         );
         return;
       }
@@ -649,7 +671,7 @@
     } catch (_) {
       exportFlow.hijack = false;
       exportFlow.untilMessageId = null;
-      openExportModalError("进入选对话超时，请刷新页面后重试。");
+      openExportModalError(t("exportEnterTimeout"));
     }
   }
 
@@ -659,19 +681,19 @@
     root.className = "dspicker-overlay";
     root.hidden = true;
     root.innerHTML = `
-      <div class="dspicker-modal dspicker-modal--export" role="dialog" aria-modal="true" aria-label="导出会话">
+      <div class="dspicker-modal dspicker-modal--export" role="dialog" aria-modal="true" aria-label="${t("dialogExport")}">
         <div class="dspicker-header">
-          <div class="dspicker-header-title">导出会话</div>
+          <div class="dspicker-header-title">${t("exportSession")}</div>
           <label class="dspicker-check">
             <input type="checkbox" data-action="include-think" />
-            <span>包含深度思考</span>
+            <span>${t("includeThink")}</span>
           </label>
           <div class="dspicker-status" hidden></div>
           <div class="dspicker-actions">
-            <button type="button" class="dspicker-btn" data-action="copy">复制</button>
-            <button type="button" class="dspicker-btn" data-action="download">下载 .md</button>
-            <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="back" hidden aria-label="返回选对话">返回</button>
-            <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="close" aria-label="关闭">关闭</button>
+            <button type="button" class="dspicker-btn" data-action="copy">${t("copy")}</button>
+            <button type="button" class="dspicker-btn" data-action="download">${t("downloadMd")}</button>
+            <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="back" hidden aria-label="${t("backToSelection")}">${t("back")}</button>
+            <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="close" aria-label="${t("close")}">${t("close")}</button>
           </div>
         </div>
         <pre class="dspicker-body" tabindex="0"></pre>
@@ -725,20 +747,20 @@
     root.querySelector('[data-action="copy"]').addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(state.markdown || "");
-        showStatus("已复制", true);
+        showStatus(t("copied"), true);
       } catch (_) {
-        showStatus("复制失败，请手动全选复制", false);
+        showStatus(t("copyFailed"), false);
       }
     });
 
     root.querySelector('[data-action="download"]').addEventListener("click", () => {
       if (!state.markdown) {
-        showStatus("没有可下载的内容", false);
+        showStatus(t("downloadEmpty"), false);
         return;
       }
       const sid = state.payload && state.payload.sessionId;
       downloadText(exportFileName(sid), state.markdown);
-      showStatus("已开始下载", true);
+      showStatus(t("downloadStarted"), true);
     });
 
     exportModalEl = root;
@@ -806,7 +828,7 @@
     thinkCb.checked = false;
     state.payload = payload && payload.ok ? payload : null;
     if (!state.payload || !state.payload.messages || !state.payload.messages.length) {
-      state.markdown = "没有可导出的消息。";
+      state.markdown = t("exportNoMessages");
     } else {
       state.markdown = buildExportMarkdown(state.payload, state.includeThink);
     }
@@ -902,7 +924,7 @@
   function createTriggerButton(messageKey) {
     return createIconToolbarButton(
       "dspicker-trigger",
-      "显示原文",
+      t("showOriginal"),
       createRawIconSvg(),
       () => openModalForMessageId(messageKey)
     );
@@ -911,7 +933,7 @@
   function createExportTriggerButton(messageKey) {
     return createIconToolbarButton(
       "dspicker-export-trigger",
-      "导出会话",
+      t("exportSession"),
       createExportIconSvg(),
       () => startExportSelection(messageKey)
     );

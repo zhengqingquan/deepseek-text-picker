@@ -1,0 +1,139 @@
+{
+  "extName": {
+    "message": "DeepSeek Text Picker",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "在 DeepSeek 聊天页显示与官方复制一致的 Markdown 原文，并可导出整段会话",
+    "description": "Extension description"
+  },
+  "showOriginal": {
+    "message": "显示原文"
+  },
+  "exportSession": {
+    "message": "导出会话"
+  },
+  "dialogOriginal": {
+    "message": "消息原文"
+  },
+  "dialogExport": {
+    "message": "导出会话"
+  },
+  "tabOriginal": {
+    "message": "原文"
+  },
+  "tabThink": {
+    "message": "思考"
+  },
+  "includeThink": {
+    "message": "包含深度思考"
+  },
+  "copy": {
+    "message": "复制"
+  },
+  "close": {
+    "message": "关闭"
+  },
+  "back": {
+    "message": "返回"
+  },
+  "backToSelection": {
+    "message": "返回选对话"
+  },
+  "downloadMd": {
+    "message": "下载 .md"
+  },
+  "copied": {
+    "message": "已复制"
+  },
+  "copyFailed": {
+    "message": "复制失败，请手动全选复制"
+  },
+  "resolveFailed": {
+    "message": "未从页面内存读到原文。请确认该条回答已显示完整，或刷新后重试。"
+  },
+  "userOnlyUnsupported": {
+    "message": "仅支持查看 DeepSeek 回答的原文。"
+  },
+  "emptyContent": {
+    "message": "(空)"
+  },
+  "resolveTimeout": {
+    "message": "读取原文超时，请刷新页面后重试。"
+  },
+  "createExportContent": {
+    "message": "创建导出内容"
+  },
+  "defaultChatTitle": {
+    "message": "DeepSeek 对话"
+  },
+  "roleUser": {
+    "message": "用户"
+  },
+  "thinkSummary": {
+    "message": "思考"
+  },
+  "exportReadFailed": {
+    "message": "未能读取已选对话，请重试。"
+  },
+  "exportNoSelection": {
+    "message": "当前没有可导出的已选消息。"
+  },
+  "exportFailed": {
+    "message": "导出会话失败，请刷新后重试。"
+  },
+  "exportTimeout": {
+    "message": "导出会话超时，请刷新页面后重试。"
+  },
+  "exportNoSession": {
+    "message": "当前不在会话页。请打开具体聊天后再导出。"
+  },
+  "exportNoShareApi": {
+    "message": "未能接入页面分享选对话。请刷新后重试，或确认 DeepSeek 页面已加载完成。"
+  },
+  "exportEnterFailed": {
+    "message": "无法进入选对话，请刷新后重试。"
+  },
+  "exportEnterTimeout": {
+    "message": "进入选对话超时，请刷新页面后重试。"
+  },
+  "exportNoMessages": {
+    "message": "没有可导出的消息。"
+  },
+  "downloadEmpty": {
+    "message": "没有可下载的内容"
+  },
+  "downloadStarted": {
+    "message": "已开始下载"
+  },
+  "popupMenuAria": {
+    "message": "扩展菜单"
+  },
+  "popupTipLead": {
+    "message": "在 DeepSeek 的回答底部："
+  },
+  "popupTipClick": {
+    "message": "点击"
+  },
+  "popupTipExportSuffix": {
+    "message": "可以导出会话为 Markdown。"
+  },
+  "popupTipOriginalSuffix": {
+    "message": "可以查看 Markdown 原文。"
+  },
+  "openDeepSeek": {
+    "message": "打开 DeepSeek"
+  },
+  "githubRepo": {
+    "message": "GitHub 仓库"
+  },
+  "viewReleases": {
+    "message": "查看更新"
+  },
+  "donate": {
+    "message": "打赏支持"
+  },
+  "openInNewTab": {
+    "message": "在新标签页打开"
+  }
+}

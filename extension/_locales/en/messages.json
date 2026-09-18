@@ -1,0 +1,139 @@
+{
+  "extName": {
+    "message": "DeepSeek Text Picker",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Show Markdown matching DeepSeek’s Copy on chat pages, and export the full conversation",
+    "description": "Extension description"
+  },
+  "showOriginal": {
+    "message": "Show source"
+  },
+  "exportSession": {
+    "message": "Export chat"
+  },
+  "dialogOriginal": {
+    "message": "Message source"
+  },
+  "dialogExport": {
+    "message": "Export chat"
+  },
+  "tabOriginal": {
+    "message": "Source"
+  },
+  "tabThink": {
+    "message": "Thinking"
+  },
+  "includeThink": {
+    "message": "Include thinking"
+  },
+  "copy": {
+    "message": "Copy"
+  },
+  "close": {
+    "message": "Close"
+  },
+  "back": {
+    "message": "Back"
+  },
+  "backToSelection": {
+    "message": "Back to selection"
+  },
+  "downloadMd": {
+    "message": "Download .md"
+  },
+  "copied": {
+    "message": "Copied"
+  },
+  "copyFailed": {
+    "message": "Copy failed — select all and copy manually"
+  },
+  "resolveFailed": {
+    "message": "Could not read source from page memory. Make sure the reply is fully loaded, or refresh and try again."
+  },
+  "userOnlyUnsupported": {
+    "message": "Only DeepSeek replies can be viewed as source."
+  },
+  "emptyContent": {
+    "message": "(empty)"
+  },
+  "resolveTimeout": {
+    "message": "Timed out reading source. Refresh the page and try again."
+  },
+  "createExportContent": {
+    "message": "Create export"
+  },
+  "defaultChatTitle": {
+    "message": "DeepSeek chat"
+  },
+  "roleUser": {
+    "message": "User"
+  },
+  "thinkSummary": {
+    "message": "Thinking"
+  },
+  "exportReadFailed": {
+    "message": "Could not read the selected messages. Please try again."
+  },
+  "exportNoSelection": {
+    "message": "No selected messages to export."
+  },
+  "exportFailed": {
+    "message": "Export failed. Refresh and try again."
+  },
+  "exportTimeout": {
+    "message": "Export timed out. Refresh the page and try again."
+  },
+  "exportNoSession": {
+    "message": "You are not in a chat. Open a conversation first, then export."
+  },
+  "exportNoShareApi": {
+    "message": "Could not hook into DeepSeek’s share selection. Refresh, or wait until the page has finished loading."
+  },
+  "exportEnterFailed": {
+    "message": "Could not enter message selection. Refresh and try again."
+  },
+  "exportEnterTimeout": {
+    "message": "Timed out entering selection. Refresh the page and try again."
+  },
+  "exportNoMessages": {
+    "message": "No messages to export."
+  },
+  "downloadEmpty": {
+    "message": "Nothing to download"
+  },
+  "downloadStarted": {
+    "message": "Download started"
+  },
+  "popupMenuAria": {
+    "message": "Extension menu"
+  },
+  "popupTipLead": {
+    "message": "At the bottom of a DeepSeek reply:"
+  },
+  "popupTipClick": {
+    "message": "Click"
+  },
+  "popupTipExportSuffix": {
+    "message": "to export the chat as Markdown."
+  },
+  "popupTipOriginalSuffix": {
+    "message": "to view the Markdown source."
+  },
+  "openDeepSeek": {
+    "message": "Open DeepSeek"
+  },
+  "githubRepo": {
+    "message": "GitHub repository"
+  },
+  "viewReleases": {
+    "message": "What’s new"
+  },
+  "donate": {
+    "message": "Donate"
+  },
+  "openInNewTab": {
+    "message": "Open in new tab"
+  }
+}
