@@ -262,7 +262,7 @@
   /* ---------------- UI: 导出会话（复用官方分享选对话） ---------------- */
 
   const SHARE_CONFIRM_RE =
-    /创建公开链接|Create public link|Create link|Create and copy|创建并复制|确认并复制|Copy link|Confirm and copy|创建导出内容|Create export/i;
+    /创建公开链接|建立公開連結|創建公開連結|Create public link|Create link|Create and copy|创建并复制|建立並複製|确认并复制|確認並複製|Copy link|Confirm and copy|创建导出内容|建立匯出內容|Create export/i;
   const SHARE_CANCEL_RE = /^(取消|Cancel)$/i;
 
   /** @type {{ hijack: boolean, patching: boolean, patchingBar: boolean, seenSelecting: boolean, observer: MutationObserver|null, pollTimer: number, docClickBound: boolean, untilMessageId: string|null }} */
@@ -392,7 +392,7 @@
         let p = el.parentElement;
         for (let i = 0; i < 6 && p; i++) {
           const pt = (p.textContent || "").replace(/\s+/g, " ");
-          if (/全选|Select all/.test(pt) && /取消|Cancel|公开|link|Link/i.test(pt)) {
+          if (/全选|全選|Select all/.test(pt) && /取消|Cancel|公开|公開|link|Link/i.test(pt)) {
             push(el);
             return;
           }

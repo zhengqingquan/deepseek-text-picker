@@ -9,10 +9,8 @@
     return key;
   }
 
-  const uiLang = chrome.i18n.getUILanguage() || "";
-  document.documentElement.lang = uiLang.toLowerCase().startsWith("zh")
-    ? "zh-CN"
-    : uiLang || "en";
+  const uiLang = chrome.i18n.getUILanguage() || "zh-CN";
+  document.documentElement.lang = uiLang;
 
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.getAttribute("data-i18n");

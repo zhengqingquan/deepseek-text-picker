@@ -17,7 +17,7 @@ Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek
 
 「复制」写入剪贴板；成功时在顶栏显示「已复制」。有深度思考时可切换「原文 / 思考」，并可选「包含深度思考」。导出会话支持复制或下载 `.md`。
 
-界面语言跟随浏览器 UI 语言（内置简体中文 / English；其它语言回退到简体中文）。
+界面语言跟随浏览器 UI 语言（内置简体中文 / 繁體中文 / English；其它语言回退到简体中文）。
 
 若提示读不到原文 / 会话：确认对话已显示完整，或刷新页面后重试。
 
@@ -56,7 +56,7 @@ docs/
   demo.gif        # README 使用演示（动图）
   screenshot.png  # README 截图：显示原文弹层
 extension/
-  _locales/       # chrome.i18n：zh_CN（默认）/ en
+  _locales/       # chrome.i18n：zh_CN（默认）/ zh_TW / zh_HK / en
   manifest.json
   inject.js       # MAIN world：读取页面本地 store
   content.js      # Isolated world：按钮 UI、弹层、与 inject 通信

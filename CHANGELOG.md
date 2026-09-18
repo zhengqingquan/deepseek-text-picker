@@ -6,7 +6,8 @@
 
 ### 新增
 
-- 多语言：Chrome `_locales` + `chrome.i18n`（默认 `zh_CN`，另提供 `en`）；界面跟随浏览器 UI 语言
+- 多语言：Chrome `_locales` + `chrome.i18n`（默认 `zh_CN`，另提供 `zh_TW` / `zh_HK` / `en`）；界面跟随浏览器 UI 语言
+- 匹配 DeepSeek 官方底栏时兼容繁体文案（如「全選」「建立公開連結」）
 
 ### 修复
 
