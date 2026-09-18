@@ -4,17 +4,18 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-18
+
 ### 新增
 
 - 多语言：Chrome `_locales` + `chrome.i18n`（默认 `zh_CN`，另提供 `zh_TW` / `zh_HK` / `en`）；界面跟随浏览器 UI 语言
 - 匹配 DeepSeek 官方底栏时兼容繁体文案（如「全選」「建立公開連結」）
-- 仓库文档增加英文 / 繁体 README（`README.en.md` / `README.zh-TW.md`），各语言文首可互跳；README 文首改为居中品牌区 + badges（对齐 himawari8-observer 风格）
-
-### 修复
-
-- 导出会话默认勾选到末条时改为写入 `selectedMessages: "all"`，底部「全选」同步勾选（此前写入完整 id 数组时各条已勾但底栏未勾）
-- 修复导出会话卡死：底栏补丁勿在每次 `patchNativeShareBar` 重写 `textContent`（会触发 MutationObserver 死循环）
-- 移除已无用的 `.dspicker-trigger-wrap` 样式与挂载清理残留（按钮已直接挂官方 toolbar）
+- 仓库文档增加英文 / 繁体 README（`README.en.md` / `README.zh-TW.md`），各语言文首可互跳；README 文首改为居中品牌区 + badges
+- 导出弹层可勾选「包含深度思考」（默认不导出）
+- 导出预览弹层增加「返回」，可回到选对话继续勾选，无需再点「导出会话」
+- 导出会话 Markdown 在「用户 / DeepSeek」标题旁附带消息时间（有则显示）
+- 点击某条回复旁的「导出会话」时，默认勾选从会话开头到该条（含），可再改选后导出
+- 原文 / 导出会话弹层跟随 DeepSeek 明暗主题（`html:has(body.dark)`）；扩展弹窗跟随系统 `prefers-color-scheme`
 
 ### 变更
 
@@ -26,15 +27,13 @@
 - 「显示原文」弹层保留「原文 / 思考」页签，并新增「包含深度思考」勾选（有思考时显示；在原文页勾选后以可折叠摘要并入正文）
 - 清理未使用的样式与导出状态字段；去掉选对话巩固时多余的 0ms 重复写入
 - 回答生成中不显示「导出会话 / 显示原文」图标；待官方操作栏出现完整操作后再挂载
+- 移除已无用的 `.dspicker-trigger-wrap` 样式与挂载清理残留（按钮已直接挂官方 toolbar）
 
-### 新增
+### 修复
 
-- 导出弹层可勾选「包含深度思考」（默认不导出）
-- 导出预览弹层增加「返回」，可回到选对话继续勾选，无需再点「导出会话」
-- 导出会话 Markdown 在「用户 / DeepSeek」标题旁附带消息时间（有则显示）
-- 点击某条回复旁的「导出会话」时，默认勾选从会话开头到该条（含），可再改选后导出
+- 导出会话默认勾选到末条时改为写入 `selectedMessages: "all"`，底部「全选」同步勾选（此前写入完整 id 数组时各条已勾但底栏未勾）
+- 修复导出会话卡死：底栏补丁勿在每次 `patchNativeShareBar` 重写 `textContent`（会触发 MutationObserver 死循环）
 - 修复部分勾选：不再把整段 path 传给 `enterSelection`（官方 toggle 成对加减会互相抵消），改为空选后直接写入 `selectedMessages`
-- 原文 / 导出会话弹层跟随 DeepSeek 明暗主题（`html:has(body.dark)`，因弹层挂在 html 下）；扩展弹窗跟随系统 `prefers-color-scheme`
 - 修复无深度思考时「包含深度思考」仍显示：`.dspicker-check` 的 `display` 盖住了原生 `hidden`
 
 ## [0.2.0] - 2026-09-17
