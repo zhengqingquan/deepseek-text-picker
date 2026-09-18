@@ -237,6 +237,15 @@
     return t ? `## ${roleLabel} · ${t}` : `## ${roleLabel}`;
   }
 
+  /** 思考放在回复前，用 details/summary 折叠，避免长思考挤占正文 */
+  function formatThinkBlock(think) {
+    const text = String(think || "")
+      .trim()
+      .replace(/<\/details>/gi, "<\\/details>");
+    if (!text) return "";
+    return `<details>\n<summary>思考</summary>\n\n${text}\n\n</details>`;
+  }
+
   function buildExportMarkdown(payload, includeThink) {
     const title =
       payload && payload.title && String(payload.title).trim()
@@ -249,10 +258,12 @@
       if (role === "USER") {
         lines.push(exportHeading("用户", msg), "", msg.content || "", "");
       } else {
-        lines.push(exportHeading("DeepSeek", msg), "", msg.content || "", "");
-        if (includeThink && msg.think && String(msg.think).trim()) {
-          lines.push("### 思考", "", String(msg.think).trim(), "");
+        lines.push(exportHeading("DeepSeek", msg), "");
+        if (includeThink) {
+          const thinkBlock = formatThinkBlock(msg.think);
+          if (thinkBlock) lines.push(thinkBlock, "");
         }
+        lines.push(msg.content || "", "");
       }
     }
     return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
