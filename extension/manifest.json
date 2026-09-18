@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "DeepSeek Text Picker",
   "version": "0.2.0",
-  "description": "在 DeepSeek 聊天页显示与官方复制一致的 Markdown 原文（读取页面本地 store）",
+  "description": "在 DeepSeek 聊天页显示与官方复制一致的 Markdown 原文，并可导出整段会话",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

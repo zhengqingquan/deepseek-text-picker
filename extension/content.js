@@ -4,26 +4,33 @@
   /** @type {Map<number, {resolve: Function, reject: Function, timer: number}>} */
   const pending = new Map();
 
-  function resolveRaw(messageId) {
+  function postRequest(type, extra, timeoutMs) {
     const reqId = ++reqSeq;
     return new Promise((resolve, reject) => {
       const timer = window.setTimeout(() => {
         pending.delete(reqId);
         reject(new Error("timeout"));
-      }, 3000);
+      }, timeoutMs || 3000);
       pending.set(reqId, { resolve, reject, timer });
-      window.postMessage(
-        { source: SOURCE, type: "resolve", messageId: String(messageId), reqId },
-        "*"
-      );
+      window.postMessage({ source: SOURCE, type, reqId, ...extra }, "*");
     });
+  }
+
+  function resolveRaw(messageId) {
+    return postRequest("resolve", { messageId: String(messageId) }, 3000);
+  }
+
+  function exportSessionRaw() {
+    return postRequest("export_session", {}, 8000);
   }
 
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     const data = event.data;
     if (!data || data.source !== SOURCE) return;
-    if (data.type !== "resolve_result") return;
+    if (data.type !== "resolve_result" && data.type !== "export_session_result") {
+      return;
+    }
     const entry = pending.get(data.reqId);
     if (!entry) return;
     window.clearTimeout(entry.timer);
@@ -31,9 +38,10 @@
     entry.resolve(data);
   });
 
-  /* ---------------- UI ---------------- */
+  /* ---------------- UI: 单条原文 ---------------- */
 
   let modalEl = null;
+  let exportModalEl = null;
   let scanTimer = 0;
 
   function scheduleScan() {
@@ -112,10 +120,6 @@
       });
     });
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !root.hidden) closeModal();
-    });
-
     modalEl = root;
     return root;
   }
@@ -167,6 +171,187 @@
     root.hidden = false;
   }
 
+  /* ---------------- UI: 导出会话 ---------------- */
+
+  function buildExportMarkdown(payload, includeThink) {
+    const title =
+      payload && payload.title && String(payload.title).trim()
+        ? String(payload.title).trim()
+        : "DeepSeek 对话";
+    const lines = [`# ${title}`, ""];
+    const messages = (payload && payload.messages) || [];
+    for (const msg of messages) {
+      const role = String(msg.role || "").toUpperCase();
+      if (role === "USER") {
+        lines.push("## 用户", "", msg.content || "", "");
+      } else {
+        lines.push("## DeepSeek", "", msg.content || "", "");
+        if (includeThink && msg.think && String(msg.think).trim()) {
+          lines.push("### 思考", "", String(msg.think).trim(), "");
+        }
+      }
+    }
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+  }
+
+  function exportFileName(sessionId) {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const date = `${y}${m}${day}`;
+    if (sessionId) {
+      const short = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 8);
+      if (short) return `deepseek-${short}-${date}.md`;
+    }
+    return `deepseek-${date}-${d.getTime()}.md`;
+  }
+
+  function downloadText(filename, text) {
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    document.documentElement.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function ensureExportModal() {
+    if (exportModalEl) return exportModalEl;
+    const root = document.createElement("div");
+    root.className = "dspicker-overlay";
+    root.hidden = true;
+    root.innerHTML = `
+      <div class="dspicker-modal dspicker-modal--export" role="dialog" aria-modal="true" aria-label="导出会话">
+        <div class="dspicker-header">
+          <div class="dspicker-header-title">导出会话</div>
+          <label class="dspicker-check">
+            <input type="checkbox" data-action="include-think" />
+            <span>包含深度思考</span>
+          </label>
+          <div class="dspicker-status" hidden></div>
+          <div class="dspicker-actions">
+            <button type="button" class="dspicker-btn" data-action="copy">复制</button>
+            <button type="button" class="dspicker-btn" data-action="download">下载 .md</button>
+            <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="close" aria-label="关闭">关闭</button>
+          </div>
+        </div>
+        <pre class="dspicker-body" tabindex="0"></pre>
+      </div>
+    `;
+    document.documentElement.appendChild(root);
+
+    const state = {
+      payload: null,
+      markdown: "",
+      includeThink: false,
+    };
+    root.__dspExportState = state;
+
+    let backdropPointerDown = false;
+    root.addEventListener("pointerdown", (e) => {
+      backdropPointerDown = e.target === root;
+    });
+    root.addEventListener("click", (e) => {
+      if (e.target === root && backdropPointerDown) closeExportModal();
+      backdropPointerDown = false;
+    });
+
+    const thinkCb = root.querySelector('[data-action="include-think"]');
+    thinkCb.addEventListener("change", () => {
+      state.includeThink = Boolean(thinkCb.checked);
+      if (state.payload && state.payload.ok) {
+        state.markdown = buildExportMarkdown(state.payload, state.includeThink);
+        root.querySelector(".dspicker-body").textContent = state.markdown;
+      }
+    });
+
+    root.querySelector('[data-action="close"]').addEventListener("click", closeExportModal);
+
+    const showStatus = (text, ok) => {
+      const status = root.querySelector(".dspicker-status");
+      status.hidden = false;
+      status.textContent = text;
+      status.classList.toggle("is-error", !ok);
+      setTimeout(() => {
+        status.hidden = true;
+        status.classList.remove("is-error");
+      }, 3000);
+    };
+
+    root.querySelector('[data-action="copy"]').addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(state.markdown || "");
+        showStatus("已复制", true);
+      } catch (_) {
+        showStatus("复制失败，请手动全选复制", false);
+      }
+    });
+
+    root.querySelector('[data-action="download"]').addEventListener("click", () => {
+      if (!state.markdown) {
+        showStatus("没有可下载的内容", false);
+        return;
+      }
+      const sid = state.payload && state.payload.sessionId;
+      downloadText(exportFileName(sid), state.markdown);
+      showStatus("已开始下载", true);
+    });
+
+    exportModalEl = root;
+    return root;
+  }
+
+  function closeExportModal() {
+    if (!exportModalEl) return;
+    exportModalEl.hidden = true;
+  }
+
+  async function openExportModal() {
+    const root = ensureExportModal();
+    const state = root.__dspExportState;
+    const body = root.querySelector(".dspicker-body");
+    const thinkCb = root.querySelector('[data-action="include-think"]');
+    const status = root.querySelector(".dspicker-status");
+    status.hidden = true;
+    status.textContent = "";
+    status.classList.remove("is-error");
+
+    state.includeThink = false;
+    thinkCb.checked = false;
+    state.payload = null;
+    state.markdown = "正在读取会话…";
+    body.textContent = state.markdown;
+    root.hidden = false;
+
+    try {
+      const result = await exportSessionRaw();
+      state.payload = result;
+      if (!result || !result.ok) {
+        const err = result && result.error;
+        if (err === "no_session") {
+          state.markdown = "当前不在会话页。请打开具体聊天后再导出。";
+        } else if (err === "empty") {
+          state.markdown = "当前会话没有可导出的消息。";
+        } else {
+          state.markdown =
+            "未从页面内存读到会话。请确认对话已加载完整，或刷新后重试。";
+        }
+      } else {
+        state.markdown = buildExportMarkdown(result, state.includeThink);
+      }
+    } catch (_) {
+      state.payload = null;
+      state.markdown = "导出会话超时，请刷新页面后重试。";
+    }
+
+    body.textContent = state.markdown;
+  }
+
   function isAssistantItem(item) {
     if (!item) return false;
     if (item.querySelector(".ds-assistant-message-main-content")) return true;
@@ -186,23 +371,36 @@
     return svg;
   }
 
-  function createTriggerButton(messageKey) {
+  function createExportIconSvg() {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("width", "16");
+    svg.setAttribute("height", "16");
+    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("fill", "none");
+    svg.innerHTML =
+      '<path fill="currentColor" d="M8 1.25a.75.75 0 0 1 .75.75v6.19l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 0 1 1.06-1.06l1.72 1.72V2A.75.75 0 0 1 8 1.25ZM2.75 10a.75.75 0 0 1 .75.75v1.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25v-1.5a.75.75 0 0 1 1.5 0v1.5A2.75 2.75 0 0 1 11.25 14h-6.5A2.75 2.75 0 0 1 2 12.25v-1.5a.75.75 0 0 1 .75-.75Z"/>';
+    return svg;
+  }
+
+  function createIconToolbarButton(className, title, iconEl, onOpen) {
     const btn = document.createElement("div");
     btn.role = "button";
     btn.tabIndex = 0;
     btn.className =
-      "ds-button ds-button--iconLabelTertiary ds-button--icon ds-button--capsule ds-button--xs ds-button--icon-relative-l dspicker-trigger";
-    btn.title = "显示原文";
-    btn.setAttribute("aria-label", "显示原文");
+      "ds-button ds-button--iconLabelTertiary ds-button--icon ds-button--capsule ds-button--xs ds-button--icon-relative-l " +
+      className;
+    btn.title = title;
+    btn.setAttribute("aria-label", title);
     btn.innerHTML =
       '<div class="ds-button__background"></div>' +
       '<div class="ds-button__icon ds-button__icon--last-child"><div class="ds-icon" style="font-size: inherit;"></div></div>';
-    btn.querySelector(".ds-icon").appendChild(createRawIconSvg());
+    btn.querySelector(".ds-icon").appendChild(iconEl);
 
     const open = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      openModalForMessageId(messageKey);
+      onOpen();
     };
     btn.addEventListener("click", open);
     btn.addEventListener("keydown", (e) => {
@@ -211,9 +409,27 @@
     return btn;
   }
 
+  function createTriggerButton(messageKey) {
+    return createIconToolbarButton(
+      "dspicker-trigger",
+      "显示原文",
+      createRawIconSvg(),
+      () => openModalForMessageId(messageKey)
+    );
+  }
+
+  function createExportTriggerButton() {
+    return createIconToolbarButton(
+      "dspicker-export-trigger",
+      "导出会话",
+      createExportIconSvg(),
+      () => openExportModal()
+    );
+  }
+
   function findAssistantToolbar(item) {
     const icons = item.querySelectorAll(
-      ".ds-button.ds-button--icon:not(.dspicker-trigger)"
+      ".ds-button.ds-button--icon:not(.dspicker-trigger):not(.dspicker-export-trigger)"
     );
     for (const el of icons) {
       const parent = el.parentElement;
@@ -223,9 +439,23 @@
   }
 
   function detachButton(item) {
-    item.querySelectorAll(".dspicker-trigger, .dspicker-trigger-wrap").forEach((el) => {
-      el.remove();
-    });
+    item
+      .querySelectorAll(
+        ".dspicker-trigger, .dspicker-export-trigger, .dspicker-trigger-wrap"
+      )
+      .forEach((el) => {
+        el.remove();
+      });
+  }
+
+  function placePickerButtons(container, exportBtn, rawBtn, beforeNode) {
+    if (beforeNode && beforeNode.parentElement === container) {
+      container.insertBefore(exportBtn, beforeNode);
+      container.insertBefore(rawBtn, beforeNode);
+      return;
+    }
+    container.appendChild(exportBtn);
+    container.appendChild(rawBtn);
   }
 
   function attachButton(item) {
@@ -240,34 +470,59 @@
     }
 
     const toolbar = findAssistantToolbar(item);
-    const existing = item.querySelector(".dspicker-trigger");
+    let existingRaw = item.querySelector(".dspicker-trigger");
+    let existingExport = item.querySelector(".dspicker-export-trigger");
 
-    if (existing && toolbar && !toolbar.contains(existing)) {
-      const wrap = existing.closest(".dspicker-trigger-wrap");
-      toolbar.appendChild(existing);
+    if (existingRaw && toolbar && !toolbar.contains(existingRaw)) {
+      const wrap = existingRaw.closest(".dspicker-trigger-wrap");
+      if (existingExport && !toolbar.contains(existingExport)) {
+        placePickerButtons(toolbar, existingExport, existingRaw);
+      } else if (existingExport) {
+        toolbar.insertBefore(existingRaw, existingExport.nextSibling);
+      } else {
+        toolbar.appendChild(existingRaw);
+      }
       if (wrap) wrap.remove();
+      existingRaw = item.querySelector(".dspicker-trigger");
+      existingExport = item.querySelector(".dspicker-export-trigger");
+    }
+
+    if (existingRaw && existingExport) {
+      if (
+        existingExport.nextSibling !== existingRaw &&
+        existingExport.parentElement === existingRaw.parentElement
+      ) {
+        existingRaw.parentElement.insertBefore(existingExport, existingRaw);
+      }
       return;
     }
-    if (existing) return;
 
-    const btn = createTriggerButton(key);
+    const rawBtn = existingRaw || createTriggerButton(key);
+    const exportBtn = existingExport || createExportTriggerButton();
+
     if (toolbar) {
-      toolbar.appendChild(btn);
+      placePickerButtons(toolbar, exportBtn, rawBtn);
       return;
     }
 
-    const message = item.querySelector(".ds-message");
-    const wrap = document.createElement("div");
-    wrap.className = "dspicker-trigger-wrap";
-    wrap.appendChild(btn);
-    if (message) {
-      message.insertAdjacentElement("afterend", wrap);
-    } else {
-      item.appendChild(wrap);
+    let wrap = item.querySelector(".dspicker-trigger-wrap");
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.className = "dspicker-trigger-wrap";
+      const message = item.querySelector(".ds-message");
+      if (message) {
+        message.insertAdjacentElement("afterend", wrap);
+      } else {
+        item.appendChild(wrap);
+      }
     }
+    placePickerButtons(wrap, exportBtn, rawBtn);
   }
 
   function scanAndAttach() {
+    document
+      .querySelectorAll(".dspicker-export-fab, .dspicker-export-inline")
+      .forEach((el) => el.remove());
     document
       .querySelectorAll("[data-virtual-list-item-key]")
       .forEach((el) => attachButton(el));
@@ -295,7 +550,16 @@
       attributes: true,
       attributeFilter: ["data-virtual-list-item-key"],
     });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if (exportModalEl && !exportModalEl.hidden) {
+        closeExportModal();
+        return;
+      }
+      if (modalEl && !modalEl.hidden) closeModal();
+    });
     scanAndAttach();
+    window.addEventListener("popstate", scheduleScan);
   }
 
   if (document.readyState === "loading") {

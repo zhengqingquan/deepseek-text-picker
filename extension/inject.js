@@ -267,6 +267,23 @@
       .join("\n\n");
   }
 
+  function getRequestContent(message) {
+    if (!message || !Array.isArray(message.fragments)) return "";
+    const hit = message.fragments.find(
+      (f) => f && f.type === "REQUEST" && f.content != null && String(f.content).length
+    );
+    if (hit) return String(hit.content);
+    const any = message.fragments.find(
+      (f) =>
+        f &&
+        f.content &&
+        String(f.content).trim() &&
+        f.type &&
+        /REQUEST/i.test(String(f.type))
+    );
+    return any ? String(any.content) : "";
+  }
+
   /** 对齐官方 getCopyContent / sm() */
   function toCopyContent(message) {
     let text = getResponseContent(message).trim();
@@ -275,6 +292,169 @@
       text = text.replace(/\[(citation|reference):\d+\]/g, "");
     }
     return text;
+  }
+
+  /** 临时消息 id：官方用 <= -2 */
+  function isTempMessageId(id) {
+    const n = Number(id);
+    return !Number.isNaN(n) && n <= -2;
+  }
+
+  function splitLeadingTempIds(childIds) {
+    if (!Array.isArray(childIds) || !childIds.length) return [[], []];
+    const idx = childIds.findIndex((id) => !isTempMessageId(id));
+    if (idx < 0) return [childIds.slice(), []];
+    return [childIds.slice(0, idx), childIds.slice(idx)];
+  }
+
+  function readRawMessage(store, sid, mid) {
+    return readMessageFromSession(store, sid, mid);
+  }
+
+  /**
+   * 对齐官方 getMessagePathItems：沿 rootBranchIds[rootBranchIndex]
+   * + childIds[currentChildIndex] 走当前主分支。
+   */
+  function getMessagePathIds(store, sessionId) {
+    const session =
+      (store.sessionStore &&
+        (store.sessionStore[sessionId] || store.sessionStore[String(sessionId)])) ||
+      (typeof store.getSession === "function" ? store.getSession(sessionId) : null);
+    if (!session) return [];
+
+    const path = [];
+    const push = (id) => {
+      if (id == null) return;
+      path.push(id);
+    };
+
+    const roots = Array.isArray(session.rootBranchIds) ? session.rootBranchIds : [];
+    const rootIdx =
+      typeof session.rootBranchIndex === "number" ? session.rootBranchIndex : 0;
+    let cur = roots[rootIdx];
+    if (cur != null) push(cur);
+
+    while (cur != null) {
+      const msg = readRawMessage(store, sessionId, cur);
+      if (!msg) break;
+      const childIds = Array.isArray(msg.childIds) ? msg.childIds : [];
+      const [temps] = splitLeadingTempIds(childIds);
+      temps.forEach(push);
+      const next =
+        typeof msg.currentChildIndex === "number"
+          ? childIds[msg.currentChildIndex]
+          : undefined;
+      if (next == null) break;
+      if (!temps.includes(next)) push(next);
+      cur = next;
+    }
+    return path;
+  }
+
+  function orderIdsFromDom() {
+    const ids = [];
+    document.querySelectorAll("[data-virtual-list-item-key]").forEach((el) => {
+      const k = el.getAttribute("data-virtual-list-item-key");
+      if (k != null && k !== "") ids.push(k);
+    });
+    return ids;
+  }
+
+  function messageTimestamp(raw) {
+    if (!raw || typeof raw !== "object") return 0;
+    const candidates = [
+      raw.insertedAt,
+      raw.inserted_at,
+      raw.createdAt,
+      raw.created_at,
+      raw.updatedAt,
+      raw.updated_at,
+    ];
+    for (const c of candidates) {
+      const n = Number(c);
+      if (!Number.isNaN(n) && n > 0) return n;
+    }
+    return 0;
+  }
+
+  function orderMessageIds(store, sessionId, messageStore) {
+    let ids = getMessagePathIds(store, sessionId);
+    if (ids.length) return ids.map(String);
+
+    const domIds = orderIdsFromDom();
+    if (domIds.length) return domIds.map(String);
+
+    const keys = Object.keys(messageStore || {});
+    keys.sort((a, b) => {
+      const ta = messageTimestamp(messageStore[a]);
+      const tb = messageTimestamp(messageStore[b]);
+      if (ta !== tb) return ta - tb;
+      const na = Number(a);
+      const nb = Number(b);
+      if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+      return String(a).localeCompare(String(b));
+    });
+    return keys;
+  }
+
+  function exportMessageEntry(raw, fallbackId) {
+    const msg = normalizeMessage(raw, fallbackId);
+    if (!msg) return null;
+    const role = String(msg.role || "").toUpperCase();
+    if (role === "USER") {
+      const content = getRequestContent(msg).trim();
+      if (!content) return null;
+      return { role: "USER", content, think: "" };
+    }
+    if (role === "ASSISTANT" || getResponseContent(msg)) {
+      const content = toCopyContent(msg);
+      const think = getThinkContent(msg);
+      if (!content && !think) return null;
+      return { role: "ASSISTANT", content: content || "", think: think || "" };
+    }
+    return null;
+  }
+
+  function exportSession() {
+    const store = refreshStoreState();
+    if (!store) {
+      return { ok: false, error: "no_store" };
+    }
+    const sessionId = getSessionId();
+    if (!sessionId) {
+      return { ok: false, error: "no_session" };
+    }
+
+    const session =
+      (store.sessionStore &&
+        (store.sessionStore[sessionId] || store.sessionStore[String(sessionId)])) ||
+      (typeof store.getSession === "function" ? store.getSession(sessionId) : null);
+    if (!session || !session.messageStore) {
+      return { ok: false, error: "session_not_found", sessionId };
+    }
+
+    const title =
+      session.title != null && String(session.title).trim()
+        ? String(session.title).trim()
+        : "";
+    const orderedIds = orderMessageIds(store, sessionId, session.messageStore);
+    const messages = [];
+    const seen = new Set();
+
+    for (const mid of orderedIds) {
+      const key = String(mid);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const raw = readRawMessage(store, sessionId, mid);
+      const entry = exportMessageEntry(raw, mid);
+      if (entry) messages.push(entry);
+    }
+
+    if (!messages.length) {
+      return { ok: false, error: "empty", sessionId, title };
+    }
+
+    return { ok: true, sessionId, title, messages };
   }
 
   function messageFromMessageBody(props, want) {
@@ -465,6 +645,23 @@
     if (event.source !== window) return;
     const data = event.data;
     if (!data || data.source !== SOURCE) return;
+
+    if (data.type === "export_session") {
+      const reqId = data.reqId;
+      try {
+        const result = exportSession();
+        emit({ type: "export_session_result", reqId, ...result });
+      } catch (err) {
+        emit({
+          type: "export_session_result",
+          reqId,
+          ok: false,
+          error: String(err && err.message ? err.message : err),
+        });
+      }
+      return;
+    }
+
     if (data.type !== "resolve") return;
 
     const reqId = data.reqId;

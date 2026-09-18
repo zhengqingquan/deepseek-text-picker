@@ -17,7 +17,8 @@
   opacity: 1;
 }
 
-.dspicker-trigger.ds-button {
+.dspicker-trigger.ds-button,
+.dspicker-export-trigger.ds-button {
   cursor: pointer;
 }
 
@@ -149,6 +150,40 @@
   white-space: nowrap;
 }
 
+.dspicker-status.is-error {
+  color: #b42318;
+}
+
 .dspicker-status[hidden] {
   display: none !important;
 }
+
+.dspicker-header-title {
+  margin-right: auto;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f1114;
+  white-space: nowrap;
+}
+
+.dspicker-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgba(15, 17, 20, 0.75);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.dspicker-check input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.dspicker-modal--export {
+  width: min(840px, 100%);
+  max-height: min(85vh, 800px);
+}
+

@@ -1,6 +1,6 @@
 # DeepSeek Text Picker
 
-Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回答旁显示「原文」图标，展示与官方「复制」一致的 Markdown。
+Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回答旁显示「原文」图标，展示与官方「复制」一致的 Markdown；并可导出当前会话整段对话。
 
 ## 原理
 
@@ -33,10 +33,11 @@ Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek
 ## 使用
 
 - 仅在 DeepSeek **回答**旁出现图标（复用官方操作栏样式，悬停显示）
-- 点击后弹层展示 Markdown；有深度思考时可切换「原文 / 思考」
+- 点击「原文」弹层展示 Markdown；有深度思考时可切换「原文 / 思考」
 - 「复制」写入剪贴板；成功时在顶栏显示「已复制」
+- **导出会话**：在「原文」图标左侧点下载图标，预览整段 Markdown（含用户提问与回答）；可勾选「包含深度思考」，支持复制或下载 `.md`
 
-若提示读不到原文：确认该条回答已显示完整，或刷新页面后重试。
+若提示读不到原文 / 会话：确认对话已显示完整，或刷新页面后重试。
 
 ## 目录
 
