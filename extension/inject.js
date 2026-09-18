@@ -748,12 +748,12 @@
         /* ignore */
       }
     }
-    // 3) DOM：底栏仍在（取消/创建公开链接/我们的导出所选）
+    // 3) DOM：底栏仍在（取消/创建公开链接/我们的创建导出内容）
     try {
       const buttons = document.querySelectorAll('.ds-button, [role="button"]');
       for (const el of buttons) {
         const t = ((el.textContent || "") + "").replace(/\s+/g, " ").trim();
-        if (/创建公开链接|Create public link|导出所选|全选|Select all/i.test(t)) {
+        if (/创建公开链接|Create public link|创建导出内容|全选|Select all/i.test(t)) {
           // 需同时像底栏（靠近视口底部）
           const rect = el.getBoundingClientRect();
           if (rect.bottom > window.innerHeight - 120 && rect.height > 0) {

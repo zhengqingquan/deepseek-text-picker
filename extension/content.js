@@ -200,9 +200,9 @@
 
   /* ---------------- UI: 导出会话（复用官方分享选对话） ---------------- */
 
-  const EXPORT_CONFIRM_LABEL = "导出所选";
+  const EXPORT_CONFIRM_LABEL = "创建导出内容";
   const SHARE_CONFIRM_RE =
-    /创建公开链接|导出所选|Create public link|Create link|Create and copy|创建并复制|确认并复制|Copy link|Confirm and copy/i;
+    /创建公开链接|Create public link|Create link|Create and copy|创建并复制|确认并复制|Copy link|Confirm and copy/i;
   const SHARE_CANCEL_RE = /^(取消|Cancel)$/i;
 
   /** @type {{ hijack: boolean, patching: boolean, seenSelecting: boolean, observer: MutationObserver|null, pollTimer: number, docClickBound: boolean }} */
@@ -272,7 +272,7 @@
 
   function isShareConfirmButton(el) {
     if (!el || el.closest(".dspicker-overlay")) return false;
-    if (el.closest(".dspicker-export-confirm-layer")) return true;
+    if (el.closest(".dspicker-export-confirm-cover")) return true;
     const btn = el.closest(".ds-button, [role='button']");
     if (!btn || btn.closest(".dspicker-overlay")) return false;
     const text = buttonLabelText(btn);
@@ -325,7 +325,6 @@
   function cleanupExportHijackUi() {
     exportFlow.hijack = false;
     exportFlow.seenSelecting = false;
-    document.documentElement.classList.remove("dspicker-export-hijack");
     const layer = document.querySelector(".dspicker-export-confirm-layer");
     if (layer) layer.remove();
     document.querySelectorAll("[data-dspicker-native-hidden='1']").forEach((el) => {
@@ -409,18 +408,9 @@
     layer.className = "dspicker-export-confirm-layer";
     layer.hidden = true;
     layer.innerHTML =
-      `<div class="dspicker-export-confirm-cover ds-button ds-button--primary ds-button--xl" role="button" tabindex="0">` +
-      `<div class="ds-button__background"></div>` +
-      `<span class="ds-button__text">${EXPORT_CONFIRM_LABEL}</span>` +
-      `</div>`;
-    const cover = layer.querySelector(".dspicker-export-confirm-cover");
-    cover.addEventListener("click", (ev) => confirmNativeExportSelection(ev));
-    cover.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter" || ev.key === " ") {
-        ev.preventDefault();
-        confirmNativeExportSelection(ev);
-      }
-    });
+      `<button type="button" class="dspicker-export-confirm-cover" aria-label="${EXPORT_CONFIRM_LABEL}">` +
+      `${EXPORT_CONFIRM_LABEL}` +
+      `</button>`;
     document.documentElement.appendChild(layer);
     return layer;
   }
@@ -435,7 +425,44 @@
     });
   }
 
-  /** 隐藏官方确认按钮，用 fixed 层盖上「导出所选」 */
+  /** 从官方「创建公开链接」按钮抄计算样式到独立按钮 */
+  function applyNativeButtonLook(cover, nativeBtn) {
+    const btnCs = getComputedStyle(nativeBtn);
+    const bgEl = nativeBtn.querySelector(".ds-button__background");
+    const textEl = nativeBtn.querySelector(".ds-button__text");
+    const bgCs = bgEl ? getComputedStyle(bgEl) : null;
+    const textCs = textEl ? getComputedStyle(textEl) : null;
+
+    const bg =
+      (bgCs && bgCs.backgroundColor && bgCs.backgroundColor !== "rgba(0, 0, 0, 0)")
+        ? bgCs.backgroundColor
+        : btnCs.backgroundColor && btnCs.backgroundColor !== "rgba(0, 0, 0, 0)"
+          ? btnCs.backgroundColor
+          : "#4d6bfe";
+    const color =
+      (textCs && textCs.color) ||
+      (btnCs.color && btnCs.color !== "rgba(0, 0, 0, 0)" ? btnCs.color : "#fff");
+    const radius =
+      (bgCs && bgCs.borderRadius) ||
+      btnCs.borderRadius ||
+      "9999px";
+    const fontSize = (textCs && textCs.fontSize) || btnCs.fontSize || "14px";
+    const fontWeight = (textCs && textCs.fontWeight) || btnCs.fontWeight || "500";
+    const fontFamily =
+      (textCs && textCs.fontFamily) || btnCs.fontFamily || "inherit";
+    const letterSpacing =
+      (textCs && textCs.letterSpacing) || btnCs.letterSpacing || "normal";
+
+    cover.style.background = bg;
+    cover.style.color = color;
+    cover.style.borderRadius = radius;
+    cover.style.fontSize = fontSize;
+    cover.style.fontWeight = fontWeight;
+    cover.style.fontFamily = fontFamily;
+    cover.style.letterSpacing = letterSpacing;
+  }
+
+  /** 隐藏官方确认按钮，独立按钮对齐其位置与外观 */
   function patchNativeShareBar() {
     if (!exportFlow.hijack) return;
 
@@ -456,8 +483,6 @@
       return;
     }
 
-    hideNativeCreateButtons(natives);
-
     const target =
       natives.find((el) => {
         const r = el.getBoundingClientRect();
@@ -469,8 +494,11 @@
       return;
     }
 
-    layer.hidden = false;
     const cover = layer.querySelector(".dspicker-export-confirm-cover");
+    applyNativeButtonLook(cover, target);
+    hideNativeCreateButtons(natives);
+
+    layer.hidden = false;
     cover.style.left = Math.round(rect.left) + "px";
     cover.style.top = Math.round(rect.top) + "px";
     cover.style.width = Math.round(rect.width) + "px";
@@ -533,12 +561,10 @@
       }
       exportFlow.hijack = true;
       exportFlow.seenSelecting = false;
-      document.documentElement.classList.add("dspicker-export-hijack");
       startExportHijackWatchers();
       [50, 200, 500].forEach((ms) => window.setTimeout(patchNativeShareBar, ms));
     } catch (_) {
       exportFlow.hijack = false;
-      document.documentElement.classList.remove("dspicker-export-hijack");
       openExportModalError("进入选对话超时，请刷新页面后重试。");
     }
   }

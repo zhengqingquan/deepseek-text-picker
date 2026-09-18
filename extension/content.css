@@ -187,7 +187,7 @@
   max-height: min(85vh, 800px);
 }
 
-html.dspicker-export-hijack [data-dspicker-native-hidden="1"] {
+html [data-dspicker-native-hidden="1"] {
   visibility: hidden !important;
   pointer-events: none !important;
 }
@@ -205,13 +205,40 @@ html.dspicker-export-hijack [data-dspicker-native-hidden="1"] {
 
 .dspicker-export-confirm-cover {
   position: fixed;
-  pointer-events: auto;
-  cursor: pointer;
+  z-index: 2147483001;
   box-sizing: border-box;
-  display: flex !important;
+  margin: 0;
+  padding: 0 16px;
+  border: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 0;
-  z-index: 2147483001;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: #fff;
+  background: #4d6bfe;
+  border-radius: 9999px;
+  box-shadow: none;
+}
+
+.dspicker-export-confirm-cover:hover {
+  filter: brightness(0.96);
+}
+
+.dspicker-export-confirm-cover:active {
+  filter: brightness(0.92);
+}
+
+.dspicker-export-confirm-cover:focus-visible {
+  outline: 2px solid rgba(77, 107, 254, 0.45);
+  outline-offset: 2px;
 }
 
