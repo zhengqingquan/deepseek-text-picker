@@ -2,11 +2,18 @@
 
 Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回答旁显示「原文」图标，展示与官方「复制」一致的 Markdown；并可导出当前会话整段对话。
 
-## 原理
+## 使用
 
-点击时从页面**本地内存**读取聊天 store（zustand `D.L` → `getMessage` / `sessionStore`），正文处理对齐官方「复制」；必要时再尝试从 React fiber 读取。**不拦截网络请求**。
+在 DeepSeek 的回答底部：
 
-## 安装（开发者模式）
+1. 点击「显示原文」图标，查看 Markdown 原文
+2. 点击「导出会话」图标，导出当前会话为 Markdown
+
+「复制」写入剪贴板；成功时在顶栏显示「已复制」。有深度思考时可切换「原文 / 思考」，并可选「包含深度思考」。导出会话支持复制或下载 `.md`。
+
+若提示读不到原文 / 会话：确认对话已显示完整，或刷新页面后重试。
+
+## 安装
 
 ### 从 Release 下载（推荐）
 
@@ -30,26 +37,22 @@ Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek
 
 产物在 `dist/deepseek-text-picker-<version>.zip`。
 
-## 使用
+## 原理
 
-在 DeepSeek 的回答底部：
-
-1. 点击「导出会话」图标，可导出会话为 Markdown
-2. 点击「显示原文」图标，可查看 Markdown 原文
-
-「复制」写入剪贴板；成功时在顶栏显示「已复制」。有深度思考时可切换「原文 / 思考」，并可选「包含深度思考」。导出会话支持复制或下载 `.md`。
-
-若提示读不到原文 / 会话：确认对话已显示完整，或刷新页面后重试。
+点击时从页面**本地内存**读取聊天 store（zustand `D.L` → `getMessage` / `sessionStore`），正文处理对齐官方「复制」；必要时再尝试从 React fiber 读取。**不拦截网络请求**。
 
 ## 目录
 
 ```
 extension/
   manifest.json
-  inject.js      # MAIN world：读取页面本地 store
-  content.js     # UI 与通信
+  inject.js       # MAIN world：读取页面本地 store
+  content.js      # Isolated world：按钮 UI、弹层、与 inject 通信
   content.css
-  icons/         # 扩展图标
+  popup.html      # 工具栏弹层
+  popup.css
+  popup.js
+  icons/          # 扩展图标
 scripts/
   pack-extension.ps1  # 打成 Release 用 zip
 ```
