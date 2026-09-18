@@ -1,16 +1,39 @@
+<!-- markdownlint-disable -->
+
+[简体中文](README.md) | **繁體中文** | [English](README.en.md)
+
+<div align="center">
+
+<img src="extension/icons/icon128.png" width="120" alt="DeepSeek Text Picker">
+
 # DeepSeek Text Picker
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md)
+方便複製 DeepSeek 網頁版回覆中的部分文字：在回覆旁檢視與官方「複製」一致的 Markdown 原文，也可匯出整段會話
 
-<img src="extension/icons/icon128.png" width="64" alt="DeepSeek Text Picker">
+[回報問題](https://github.com/zhengqingquan/deepseek-text-picker/issues) · [Releases](https://github.com/zhengqingquan/deepseek-text-picker/releases) · [更新記錄](CHANGELOG.md)
 
-Chrome / Edge 擴充功能（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回覆旁顯示「原文」圖示，展示與官方「複製」一致的 Markdown；並可匯出目前會話整段對話。
+[![Version](https://img.shields.io/github/v/release/zhengqingquan/deepseek-text-picker)](https://github.com/zhengqingquan/deepseek-text-picker/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Stars](https://img.shields.io/github/stars/zhengqingquan/deepseek-text-picker?color=ffcb47&labelColor=black)<br>
+![Chrome](https://img.shields.io/badge/Chrome-MV3-4285F4?logo=googlechrome&logoColor=white)
+![Edge](https://img.shields.io/badge/Edge-MV3-0078D7?logo=microsoftedge&logoColor=white)
+![i18n](https://img.shields.io/badge/i18n-zh%20%2F%20zh%E2%80%91TW%20%2F%20en-green)
+
+<p>
+  <img src="docs/demo.gif" width="480" alt="使用示範" />
+</p>
+
+<p>
+  <img src="docs/screenshot.png" width="480" alt="顯示原文彈層" />
+</p>
+
+</div>
+
+## 簡介
+
+面向 [DeepSeek 網頁版](https://chat.deepseek.com)（Chrome / Edge）。官方聊天頁不便直接選取複製時，本擴充功能在回覆旁提供「原文」檢視，便於挑選並複製部分文字；也可依需求匯出整段會話。
 
 ## 使用
-
-![使用示範](docs/demo.gif)
-
-![顯示原文彈層](docs/screenshot.png)
 
 在 DeepSeek 的回覆底部：
 
@@ -18,8 +41,6 @@ Chrome / Edge 擴充功能（v0.2.0）：在 [chat.deepseek.com](https://chat.de
 2. 點擊「匯出會話」圖示，匯出目前會話為 Markdown
 
 「複製」寫入剪貼簿；成功時在頂列顯示「已複製」。有深度思考時可切換「原文 / 思考」，並可選「包含深度思考」。匯出會話支援複製或下載 `.md`。
-
-介面語言跟隨瀏覽器 UI 語言（內建簡體中文 / 繁體中文 / English；其它語言回退到簡體中文）。
 
 若提示讀不到原文 / 會話：請確認對話已顯示完整，或重新整理頁面後再試。
 

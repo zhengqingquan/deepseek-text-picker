@@ -1,16 +1,39 @@
+<!-- markdownlint-disable -->
+
+**简体中文** | [繁體中文](README.zh-TW.md) | [English](README.en.md)
+
+<div align="center">
+
+<img src="extension/icons/icon128.png" width="120" alt="DeepSeek Text Picker">
+
 # DeepSeek Text Picker
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md)
+方便复制 DeepSeek 网页版回答中的部分文本：在回复旁查看与官方「复制」一致的 Markdown 原文，也可导出整段会话
 
-<img src="extension/icons/icon128.png" width="64" alt="DeepSeek Text Picker">
+[反馈问题](https://github.com/zhengqingquan/deepseek-text-picker/issues) · [Releases](https://github.com/zhengqingquan/deepseek-text-picker/releases) · [更新记录](CHANGELOG.md)
 
-Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回答旁显示「原文」图标，展示与官方「复制」一致的 Markdown；并可导出当前会话整段对话。
+[![Version](https://img.shields.io/github/v/release/zhengqingquan/deepseek-text-picker)](https://github.com/zhengqingquan/deepseek-text-picker/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Stars](https://img.shields.io/github/stars/zhengqingquan/deepseek-text-picker?color=ffcb47&labelColor=black)<br>
+![Chrome](https://img.shields.io/badge/Chrome-MV3-4285F4?logo=googlechrome&logoColor=white)
+![Edge](https://img.shields.io/badge/Edge-MV3-0078D7?logo=microsoftedge&logoColor=white)
+![i18n](https://img.shields.io/badge/i18n-zh%20%2F%20zh%E2%80%91TW%20%2F%20en-green)
+
+<p>
+  <img src="docs/demo.gif" width="480" alt="使用演示" />
+</p>
+
+<p>
+  <img src="docs/screenshot.png" width="480" alt="显示原文弹层" />
+</p>
+
+</div>
+
+## 简介
+
+面向 [DeepSeek 网页版](https://chat.deepseek.com)（Chrome / Edge）。官方聊天页不便直接选中复制时，本扩展在回答旁提供「原文」视图，便于挑选并复制部分文本；也可按需导出整段会话。
 
 ## 使用
-
-![使用演示](docs/demo.gif)
-
-![显示原文弹层](docs/screenshot.png)
 
 在 DeepSeek 的回答底部：
 
@@ -18,8 +41,6 @@ Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek
 2. 点击「导出会话」图标，导出当前会话为 Markdown
 
 「复制」写入剪贴板；成功时在顶栏显示「已复制」。有深度思考时可切换「原文 / 思考」，并可选「包含深度思考」。导出会话支持复制或下载 `.md`。
-
-界面语言跟随浏览器 UI 语言（内置简体中文 / 繁體中文 / English；其它语言回退到简体中文）。
 
 若提示读不到原文 / 会话：确认对话已显示完整，或刷新页面后重试。
 

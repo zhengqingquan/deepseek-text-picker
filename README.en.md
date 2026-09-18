@@ -1,16 +1,39 @@
+<!-- markdownlint-disable -->
+
+[简体中文](README.md) | [繁體中文](README.zh-TW.md) | **English**
+
+<div align="center">
+
+<img src="extension/icons/icon128.png" width="120" alt="DeepSeek Text Picker">
+
 # DeepSeek Text Picker
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md)
+Copy parts of a DeepSeek **web** reply with ease: view Markdown matching official Copy beside the answer, or export the full chat
 
-<img src="extension/icons/icon128.png" width="64" alt="DeepSeek Text Picker">
+[Issues](https://github.com/zhengqingquan/deepseek-text-picker/issues) · [Releases](https://github.com/zhengqingquan/deepseek-text-picker/releases) · [Changelog](CHANGELOG.md)
 
-A Chrome / Edge extension (v0.2.0) for [chat.deepseek.com](https://chat.deepseek.com): shows a “Show source” icon next to replies with Markdown matching DeepSeek’s official Copy, and can export the full conversation.
+[![Version](https://img.shields.io/github/v/release/zhengqingquan/deepseek-text-picker)](https://github.com/zhengqingquan/deepseek-text-picker/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Stars](https://img.shields.io/github/stars/zhengqingquan/deepseek-text-picker?color=ffcb47&labelColor=black)<br>
+![Chrome](https://img.shields.io/badge/Chrome-MV3-4285F4?logo=googlechrome&logoColor=white)
+![Edge](https://img.shields.io/badge/Edge-MV3-0078D7?logo=microsoftedge&logoColor=white)
+![i18n](https://img.shields.io/badge/i18n-zh%20%2F%20zh%E2%80%91TW%20%2F%20en-green)
+
+<p>
+  <img src="docs/demo.gif" width="480" alt="Usage demo" />
+</p>
+
+<p>
+  <img src="docs/screenshot.png" width="480" alt="Show source dialog" />
+</p>
+
+</div>
+
+## Overview
+
+For the [DeepSeek web app](https://chat.deepseek.com) (Chrome / Edge). When the official chat page makes partial selection awkward, this extension opens a **Show source** view beside the reply so you can pick and copy what you need; you can also export the full chat.
 
 ## Usage
-
-![Demo](docs/demo.gif)
-
-![Show source dialog](docs/screenshot.png)
 
 At the bottom of a DeepSeek reply:
 
@@ -18,8 +41,6 @@ At the bottom of a DeepSeek reply:
 2. Click **Export chat** to export the conversation as Markdown
 
 **Copy** writes to the clipboard; on success the top bar shows **Copied**. When deep thinking is available, switch between **Source / Thinking**, and optionally **Include thinking**. Export supports copy or download as `.md`.
-
-The UI language follows the browser UI language (built-in Simplified Chinese / Traditional Chinese / English; other languages fall back to Simplified Chinese).
 
 If source / chat cannot be read: make sure the reply is fully loaded, or refresh and try again.
 
