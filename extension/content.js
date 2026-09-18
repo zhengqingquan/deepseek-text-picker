@@ -215,6 +215,23 @@
     docClickBound: false,
   };
 
+  function formatExportTime(ms) {
+    const n = Number(ms);
+    if (!n || Number.isNaN(n) || n <= 0) return "";
+    const d = new Date(n);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (x) => String(x).padStart(2, "0");
+    return (
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+      `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    );
+  }
+
+  function exportHeading(roleLabel, msg) {
+    const t = formatExportTime(msg && msg.time);
+    return t ? `## ${roleLabel} · ${t}` : `## ${roleLabel}`;
+  }
+
   function buildExportMarkdown(payload, includeThink) {
     const title =
       payload && payload.title && String(payload.title).trim()
@@ -225,9 +242,9 @@
     for (const msg of messages) {
       const role = String(msg.role || "").toUpperCase();
       if (role === "USER") {
-        lines.push("## 用户", "", msg.content || "", "");
+        lines.push(exportHeading("用户", msg), "", msg.content || "", "");
       } else {
-        lines.push("## DeepSeek", "", msg.content || "", "");
+        lines.push(exportHeading("DeepSeek", msg), "", msg.content || "", "");
         if (includeThink && msg.think && String(msg.think).trim()) {
           lines.push("### 思考", "", String(msg.think).trim(), "");
         }

@@ -368,10 +368,15 @@
       raw.created_at,
       raw.updatedAt,
       raw.updated_at,
+      raw.timestamp,
+      raw.time,
     ];
     for (const c of candidates) {
       const n = Number(c);
-      if (!Number.isNaN(n) && n > 0) return n;
+      if (!Number.isNaN(n) && n > 0) {
+        // 秒级时间戳转毫秒
+        return n < 1e12 ? n * 1000 : n;
+      }
     }
     return 0;
   }
@@ -401,10 +406,11 @@
     if (!msg) return null;
     const id = msg.message_id || (fallbackId != null ? String(fallbackId) : "");
     const role = String(msg.role || "").toUpperCase();
+    const time = messageTimestamp(raw);
     if (role === "USER") {
       const content = getRequestContent(msg).trim();
       if (!content) return null;
-      return { id, role: "USER", content, think: "" };
+      return { id, role: "USER", content, think: "", time };
     }
     if (role === "ASSISTANT" || getResponseContent(msg)) {
       const content = toCopyContent(msg);
@@ -415,6 +421,7 @@
         role: "ASSISTANT",
         content: content || "",
         think: think || "",
+        time,
       };
     }
     return null;
