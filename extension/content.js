@@ -83,6 +83,15 @@
     }, 80);
   }
 
+  /** 思考放在回复前，用 details/summary 折叠，避免长思考挤占正文 */
+  function formatThinkBlock(think) {
+    const text = String(think || "")
+      .trim()
+      .replace(/<\/details>/gi, "<\\/details>");
+    if (!text) return "";
+    return `<details>\n<summary>思考</summary>\n\n${text}\n\n</details>`;
+  }
+
   function ensureModal() {
     if (modalEl) return modalEl;
     const root = document.createElement("div");
@@ -270,15 +279,6 @@
   function exportHeading(roleLabel, msg) {
     const t = formatExportTime(msg && msg.time);
     return t ? `## ${roleLabel} · ${t}` : `## ${roleLabel}`;
-  }
-
-  /** 思考放在回复前，用 details/summary 折叠，避免长思考挤占正文 */
-  function formatThinkBlock(think) {
-    const text = String(think || "")
-      .trim()
-      .replace(/<\/details>/gi, "<\\/details>");
-    if (!text) return "";
-    return `<details>\n<summary>思考</summary>\n\n${text}\n\n</details>`;
   }
 
   function buildExportMarkdown(payload, includeThink) {
@@ -680,7 +680,6 @@
       payload: null,
       markdown: "",
       includeThink: false,
-      canReturn: false,
     };
     root.__dspExportState = state;
 
@@ -752,8 +751,6 @@
   function hideExportModalOnly() {
     if (!exportModalEl) return;
     exportModalEl.hidden = true;
-    const state = exportModalEl.__dspExportState;
-    if (state) state.canReturn = false;
     setExportBackVisible(exportModalEl, false);
   }
 
@@ -786,7 +783,6 @@
     thinkCb.checked = false;
     state.includeThink = false;
     state.payload = null;
-    state.canReturn = false;
     state.markdown = message;
     body.textContent = state.markdown;
     setExportBackVisible(root, false);
@@ -806,14 +802,16 @@
     state.includeThink = false;
     thinkCb.checked = false;
     state.payload = payload && payload.ok ? payload : null;
-    state.canReturn = Boolean(options && options.canReturn && exportFlow.hijack);
     if (!state.payload || !state.payload.messages || !state.payload.messages.length) {
       state.markdown = "没有可导出的消息。";
     } else {
       state.markdown = buildExportMarkdown(state.payload, state.includeThink);
     }
     body.textContent = state.markdown;
-    setExportBackVisible(root, state.canReturn);
+    setExportBackVisible(
+      root,
+      Boolean(options && options.canReturn && exportFlow.hijack)
+    );
     root.hidden = false;
   }
 

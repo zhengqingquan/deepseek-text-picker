@@ -863,7 +863,8 @@
           /* ignore */
         }
       } else {
-        [0, 40, 120].forEach((ms) => {
+        // 进入选对话后页面可能回写，短延迟再巩固一次
+        [40, 120].forEach((ms) => {
           window.setTimeout(() => setShareSelectedMessages(selected), ms);
         });
       }
@@ -877,7 +878,7 @@
       setShareSelectedMessages("all");
     } else {
       setShareSelectedMessages(selected);
-      [0, 40, 120].forEach((ms) => {
+      [40, 120].forEach((ms) => {
         window.setTimeout(() => setShareSelectedMessages(selected), ms);
       });
     }
@@ -907,8 +908,6 @@
       ok: true,
       sessionId,
       hijack: true,
-      untilMessageId: untilMessageId != null ? String(untilMessageId) : null,
-      selectedCount: selected === "all" ? null : selected.length,
     };
   }
 

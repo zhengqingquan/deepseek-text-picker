@@ -8,7 +8,6 @@
   margin-top: 4px;
   opacity: 0;
   transition: opacity 0.15s ease;
-  will-change: opacity;
 }
 
 [data-virtual-list-item-key]:hover .dspicker-trigger-wrap,
@@ -100,10 +99,6 @@
   background: rgba(15, 17, 20, 0.06);
   color: #0f1114;
   font-weight: 600;
-}
-
-.dspicker-tab[hidden] {
-  display: none !important;
 }
 
 .dspicker-actions {
