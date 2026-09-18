@@ -50,6 +50,19 @@ body {
   line-height: 1.55;
 }
 
+.menu__tip-lead {
+  margin: 0 0 4px;
+}
+
+.menu__tip-list {
+  margin: 0;
+  padding-left: 1.25em;
+}
+
+.menu__tip-list li + li {
+  margin-top: 4px;
+}
+
 .menu__tip-icon {
   display: inline-flex;
   align-items: center;
