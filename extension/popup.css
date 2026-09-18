@@ -132,3 +132,50 @@ body {
   margin: 4px 14px;
   background: #ececec;
 }
+
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    color: #e8e8ea;
+    background: #1a1b1e;
+  }
+
+  .header {
+    border-bottom-color: #2e2f34;
+  }
+
+  .header__sub {
+    color: #9a9a9e;
+  }
+
+  .menu__tip {
+    color: #a0a0a4;
+  }
+
+  .menu__tip-icon {
+    background: #2c2d32;
+    color: #c8c8cc;
+  }
+
+  .menu__item:hover,
+  .menu__item:focus-visible {
+    background: #2a2b30;
+  }
+
+  .menu__item:active {
+    background: #323338;
+  }
+
+  .menu__ext {
+    color: #7a7a7e;
+  }
+
+  .menu__item:hover .menu__ext,
+  .menu__item:focus-visible .menu__ext {
+    color: #b0b0b4;
+  }
+
+  .menu__divider {
+    background: #2e2f34;
+  }
+}

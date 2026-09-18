@@ -22,6 +22,23 @@
 }
 
 .dspicker-overlay {
+  --dsp-bg: #f7f8fa;
+  --dsp-surface: #fff;
+  --dsp-text: #0f1114;
+  --dsp-text-muted: rgba(15, 17, 20, 0.55);
+  --dsp-text-secondary: rgba(15, 17, 20, 0.75);
+  --dsp-border: rgba(15, 17, 20, 0.08);
+  --dsp-border-strong: rgba(15, 17, 20, 0.16);
+  --dsp-tab-active-bg: rgba(15, 17, 20, 0.06);
+  --dsp-btn-bg: #0f1114;
+  --dsp-btn-fg: #fff;
+  --dsp-btn-ghost-bg: #fff;
+  --dsp-btn-ghost-fg: #0f1114;
+  --dsp-status-ok: #1a7f37;
+  --dsp-status-err: #b42318;
+  --dsp-overlay: rgba(15, 17, 20, 0.45);
+  --dsp-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+
   position: fixed;
   inset: 0;
   z-index: 2147483646;
@@ -29,7 +46,28 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(15, 17, 20, 0.45);
+  background: var(--dsp-overlay);
+}
+
+/* 弹层挂在 html 下（与 body 同级），用 :has 跟随 DeepSeek 主题 */
+html:has(body.dark) .dspicker-overlay,
+html:has(body[data-ds-dark-theme="dark"]) .dspicker-overlay {
+  --dsp-bg: #1a1b1e;
+  --dsp-surface: #232429;
+  --dsp-text: #e8e8ea;
+  --dsp-text-muted: rgba(232, 232, 234, 0.55);
+  --dsp-text-secondary: rgba(232, 232, 234, 0.75);
+  --dsp-border: rgba(255, 255, 255, 0.1);
+  --dsp-border-strong: rgba(255, 255, 255, 0.18);
+  --dsp-tab-active-bg: rgba(255, 255, 255, 0.08);
+  --dsp-btn-bg: #e8e8ea;
+  --dsp-btn-fg: #1a1b1e;
+  --dsp-btn-ghost-bg: #2c2d32;
+  --dsp-btn-ghost-fg: #e8e8ea;
+  --dsp-status-ok: #3dd68c;
+  --dsp-status-err: #f87171;
+  --dsp-overlay: rgba(0, 0, 0, 0.55);
+  --dsp-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
 
 .dspicker-overlay[hidden] {
@@ -41,11 +79,11 @@
   max-height: min(80vh, 720px);
   display: flex;
   flex-direction: column;
-  background: #f7f8fa;
+  background: var(--dsp-bg);
   border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--dsp-shadow);
   overflow: hidden;
-  color: #0f1114;
+  color: var(--dsp-text);
   font-family: var(
     --dsw-font-family,
     "quote-cjk-patch",
@@ -70,8 +108,8 @@
   justify-content: flex-end;
   gap: 12px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(15, 17, 20, 0.08);
-  background: #fff;
+  border-bottom: 1px solid var(--dsp-border);
+  background: var(--dsp-surface);
   min-height: 44px;
 }
 
@@ -92,12 +130,12 @@
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  color: rgba(15, 17, 20, 0.55);
+  color: var(--dsp-text-muted);
 }
 
 .dspicker-tab.is-active {
-  background: rgba(15, 17, 20, 0.06);
-  color: #0f1114;
+  background: var(--dsp-tab-active-bg);
+  color: var(--dsp-text);
   font-weight: 600;
 }
 
@@ -107,9 +145,9 @@
 }
 
 .dspicker-btn {
-  border: 1px solid rgba(15, 17, 20, 0.16);
-  background: #0f1114;
-  color: #fff;
+  border: 1px solid var(--dsp-border-strong);
+  background: var(--dsp-btn-bg);
+  color: var(--dsp-btn-fg);
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 13px;
@@ -117,12 +155,17 @@
 }
 
 .dspicker-btn-ghost {
-  background: #fff;
-  color: #0f1114;
+  background: var(--dsp-btn-ghost-bg);
+  color: var(--dsp-btn-ghost-fg);
 }
 
 .dspicker-btn:hover {
   filter: brightness(1.05);
+}
+
+html:has(body.dark) .dspicker-btn:hover,
+html:has(body[data-ds-dark-theme="dark"]) .dspicker-btn:hover {
+  filter: brightness(1.08);
 }
 
 .dspicker-body {
@@ -135,18 +178,19 @@
   font-size: 14px;
   line-height: 1.55;
   font-family: inherit;
-  background: #f7f8fa;
+  background: var(--dsp-bg);
+  color: var(--dsp-text);
 }
 
 .dspicker-status {
   font-size: 12px;
-  color: #1a7f37;
+  color: var(--dsp-status-ok);
   line-height: 1;
   white-space: nowrap;
 }
 
 .dspicker-status.is-error {
-  color: #b42318;
+  color: var(--dsp-status-err);
 }
 
 .dspicker-status[hidden] {
@@ -157,7 +201,7 @@
   margin-right: auto;
   font-size: 14px;
   font-weight: 600;
-  color: #0f1114;
+  color: var(--dsp-text);
   white-space: nowrap;
 }
 
@@ -166,7 +210,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: rgba(15, 17, 20, 0.75);
+  color: var(--dsp-text-secondary);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -236,4 +280,3 @@ html [data-dspicker-native-hidden="1"] {
   outline: 2px solid rgba(77, 107, 254, 0.45);
   outline-offset: 2px;
 }
-
