@@ -799,6 +799,9 @@
     const until = String(untilMessageId);
     const idx = ordered.findIndex((id) => String(id) === until);
     if (idx < 0) return "all";
+    // 截到末条时必须用 "all"：官方底部「全选」勾选态依赖 selectedMessages === "all"，
+    // 写入完整 id 数组虽能勾上各条，但底栏全选仍为未勾选。
+    if (idx >= ordered.length - 1) return "all";
     return ordered.slice(0, idx + 1);
   }
 
