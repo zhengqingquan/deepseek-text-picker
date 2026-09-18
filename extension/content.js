@@ -377,8 +377,8 @@
         return;
       }
       const result = await exportSessionRaw(ids);
-      await stopExportHijack();
       if (!result || !result.ok || !Array.isArray(result.messages) || !result.messages.length) {
+        await stopExportHijack();
         openExportModalError(
           result && result.error === "empty"
             ? "当前没有可导出的已选消息。"
@@ -386,7 +386,8 @@
         );
         return;
       }
-      openExportModal(result);
+      // 预览时保持选对话，便于「返回」继续勾选；「关闭」再退出
+      openExportModal(result, { canReturn: true });
     } catch (_) {
       await stopExportHijack();
       openExportModalError("导出会话超时，请刷新页面后重试。");
@@ -397,6 +398,7 @@
 
   function onExportHijackDocClick(e) {
     if (!exportFlow.hijack || exportFlow.patching) return;
+    if (exportModalEl && !exportModalEl.hidden) return;
     if (!isShareConfirmButton(e.target)) return;
     confirmNativeExportSelection(e);
   }
@@ -465,6 +467,12 @@
   /** 隐藏官方确认按钮，独立按钮对齐其位置与外观 */
   function patchNativeShareBar() {
     if (!exportFlow.hijack) return;
+    // 预览弹层打开时不刷新底栏，避免盖住弹层
+    if (exportModalEl && !exportModalEl.hidden) {
+      const layer = document.querySelector(".dspicker-export-confirm-layer");
+      if (layer) layer.hidden = true;
+      return;
+    }
 
     let natives = findNativeCreateLinkButtons();
     if (!natives.length) {
@@ -586,6 +594,7 @@
           <div class="dspicker-actions">
             <button type="button" class="dspicker-btn" data-action="copy">复制</button>
             <button type="button" class="dspicker-btn" data-action="download">下载 .md</button>
+            <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="back" hidden aria-label="返回选对话">返回</button>
             <button type="button" class="dspicker-btn dspicker-btn-ghost" data-action="close" aria-label="关闭">关闭</button>
           </div>
         </div>
@@ -598,6 +607,7 @@
       payload: null,
       markdown: "",
       includeThink: false,
+      canReturn: false,
     };
     root.__dspExportState = state;
 
@@ -619,6 +629,7 @@
       }
     });
 
+    root.querySelector('[data-action="back"]').addEventListener("click", returnToExportSelection);
     root.querySelector('[data-action="close"]').addEventListener("click", closeExportModal);
 
     const showStatus = (text, ok) => {
@@ -655,9 +666,36 @@
     return root;
   }
 
-  function closeExportModal() {
+  function setExportBackVisible(root, visible) {
+    const backBtn = root.querySelector('[data-action="back"]');
+    if (!backBtn) return;
+    backBtn.hidden = !visible;
+  }
+
+  function hideExportModalOnly() {
     if (!exportModalEl) return;
     exportModalEl.hidden = true;
+    const state = exportModalEl.__dspExportState;
+    if (state) state.canReturn = false;
+    setExportBackVisible(exportModalEl, false);
+  }
+
+  /** 关闭预览并退出选对话（关闭 / 遮罩 / Esc） */
+  function closeExportModal() {
+    hideExportModalOnly();
+    if (exportFlow.hijack) void stopExportHijack();
+  }
+
+  /** 关闭预览，回到官方选对话勾选态 */
+  function returnToExportSelection() {
+    if (!exportModalEl) return;
+    hideExportModalOnly();
+    if (exportFlow.hijack) {
+      patchNativeShareBar();
+      [50, 200, 500].forEach((ms) => window.setTimeout(patchNativeShareBar, ms));
+      return;
+    }
+    void startExportSelection();
   }
 
   function openExportModalError(message) {
@@ -670,12 +708,14 @@
     thinkCb.checked = false;
     state.includeThink = false;
     state.payload = null;
+    state.canReturn = false;
     state.markdown = message;
     body.textContent = state.markdown;
+    setExportBackVisible(root, false);
     root.hidden = false;
   }
 
-  function openExportModal(payload) {
+  function openExportModal(payload, options) {
     const root = ensureExportModal();
     const state = root.__dspExportState;
     const body = root.querySelector(".dspicker-body");
@@ -688,12 +728,14 @@
     state.includeThink = false;
     thinkCb.checked = false;
     state.payload = payload && payload.ok ? payload : null;
+    state.canReturn = Boolean(options && options.canReturn && exportFlow.hijack);
     if (!state.payload || !state.payload.messages || !state.payload.messages.length) {
       state.markdown = "没有可导出的消息。";
     } else {
       state.markdown = buildExportMarkdown(state.payload, state.includeThink);
     }
     body.textContent = state.markdown;
+    setExportBackVisible(root, state.canReturn);
     root.hidden = false;
   }
 
@@ -891,12 +933,13 @@
     });
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
-      if (exportFlow.hijack) {
-        stopExportHijack();
-        return;
-      }
+      // 预览打开时优先关掉弹层（并退出选对话）；否则退出选对话
       if (exportModalEl && !exportModalEl.hidden) {
         closeExportModal();
+        return;
+      }
+      if (exportFlow.hijack) {
+        void stopExportHijack();
         return;
       }
       if (modalEl && !modalEl.hidden) closeModal();
