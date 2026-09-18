@@ -23,6 +23,7 @@
 - 点击某条回复旁的「导出会话」时，默认勾选从会话开头到该条（含），可再改选后导出
 - 修复部分勾选：不再把整段 path 传给 `enterSelection`（官方 toggle 成对加减会互相抵消），改为空选后直接写入 `selectedMessages`
 - 原文 / 导出会话弹层跟随 DeepSeek 明暗主题（`html:has(body.dark)`，因弹层挂在 html 下）；扩展弹窗跟随系统 `prefers-color-scheme`
+- 修复无深度思考时「包含深度思考」仍显示：`.dspicker-check` 的 `display` 盖住了原生 `hidden`
 
 ## [0.2.0] - 2026-09-17
 

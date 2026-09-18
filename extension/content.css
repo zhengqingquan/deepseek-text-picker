@@ -216,6 +216,10 @@ html:has(body[data-ds-dark-theme="dark"]) .dspicker-btn:hover {
   white-space: nowrap;
 }
 
+.dspicker-check[hidden] {
+  display: none !important;
+}
+
 .dspicker-check input {
   margin: 0;
   cursor: pointer;

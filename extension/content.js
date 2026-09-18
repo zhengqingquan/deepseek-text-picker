@@ -217,6 +217,9 @@
     thinkCb.checked = false;
     mainTab.classList.add("is-active");
     thinkTab.classList.remove("is-active");
+    // 打开时先藏，避免上一条有思考时勾选框闪一下
+    tabs.hidden = true;
+    thinkWrap.hidden = true;
 
     try {
       const result = await resolveRaw(id);
