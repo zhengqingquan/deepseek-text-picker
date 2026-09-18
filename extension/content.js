@@ -95,6 +95,10 @@
             <button type="button" class="dspicker-tab is-active" data-tab="main">原文</button>
             <button type="button" class="dspicker-tab" data-tab="think">思考</button>
           </div>
+          <label class="dspicker-check" data-role="include-think-wrap" hidden>
+            <input type="checkbox" data-action="include-think" />
+            <span>包含深度思考</span>
+          </label>
           <div class="dspicker-status" hidden></div>
           <div class="dspicker-actions">
             <button type="button" class="dspicker-btn" data-action="copy">复制</button>
@@ -110,8 +114,26 @@
       main: "",
       think: "",
       active: "main",
+      includeThink: false,
     };
     root.__dspState = state;
+
+    const renderBody = () => {
+      const body = root.querySelector(".dspicker-body");
+      if (state.active === "think") {
+        body.textContent = state.think || "";
+        return;
+      }
+      if (state.includeThink) {
+        const thinkBlock = formatThinkBlock(state.think);
+        body.textContent = thinkBlock
+          ? `${thinkBlock}\n\n${state.main || ""}`.trim() + "\n"
+          : state.main || "";
+      } else {
+        body.textContent = state.main || "";
+      }
+    };
+    root.__dspRenderBody = renderBody;
 
     let backdropPointerDown = false;
     root.addEventListener("pointerdown", (e) => {
@@ -124,18 +146,21 @@
 
     root.querySelector('[data-action="close"]').addEventListener("click", closeModal);
     root.querySelector('[data-action="copy"]').addEventListener("click", async () => {
-      const text = state.active === "think" ? state.think : state.main;
+      const body = root.querySelector(".dspicker-body");
+      const text = body.textContent || "";
       const status = root.querySelector(".dspicker-status");
       try {
-        await navigator.clipboard.writeText(text || "");
+        await navigator.clipboard.writeText(text);
         status.hidden = false;
         status.textContent = "已复制";
+        status.classList.remove("is-error");
         setTimeout(() => {
           status.hidden = true;
         }, 3000);
       } catch (_) {
         status.hidden = false;
         status.textContent = "复制失败，请手动全选复制";
+        status.classList.add("is-error");
       }
     });
 
@@ -146,9 +171,14 @@
         root.querySelectorAll(".dspicker-tab").forEach((t) => {
           t.classList.toggle("is-active", t === tab);
         });
-        const body = root.querySelector(".dspicker-body");
-        body.textContent = name === "think" ? state.think : state.main;
+        renderBody();
       });
+    });
+
+    const thinkCb = root.querySelector('[data-action="include-think"]');
+    thinkCb.addEventListener("change", () => {
+      state.includeThink = Boolean(thinkCb.checked);
+      renderBody();
     });
 
     modalEl = root;
@@ -163,15 +193,19 @@
   async function openModalForMessageId(id) {
     const root = ensureModal();
     const state = root.__dspState;
-    const body = root.querySelector(".dspicker-body");
     const tabs = root.querySelector(".dspicker-tabs");
     const thinkTab = root.querySelector('[data-tab="think"]');
     const mainTab = root.querySelector('[data-tab="main"]');
+    const thinkWrap = root.querySelector('[data-role="include-think-wrap"]');
+    const thinkCb = root.querySelector('[data-action="include-think"]');
     const status = root.querySelector(".dspicker-status");
     status.hidden = true;
     status.textContent = "";
+    status.classList.remove("is-error");
 
     state.active = "main";
+    state.includeThink = false;
+    thinkCb.checked = false;
     mainTab.classList.add("is-active");
     thinkTab.classList.remove("is-active");
 
@@ -196,9 +230,10 @@
       state.think = "";
     }
 
-    const hasThink = Boolean(state.think);
+    const hasThink = Boolean(state.think && String(state.think).trim());
     tabs.hidden = !hasThink;
-    body.textContent = state.active === "think" ? state.think : state.main;
+    thinkWrap.hidden = !hasThink;
+    root.__dspRenderBody();
     root.hidden = false;
   }
 
