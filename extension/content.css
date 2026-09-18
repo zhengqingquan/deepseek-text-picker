@@ -1,20 +1,4 @@
-/* 挂入官方操作栏时，显隐由站点 toolbar opacity 控制；以下仅兜底 */
-
-.dspicker-trigger-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  margin-top: 4px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-[data-virtual-list-item-key]:hover .dspicker-trigger-wrap,
-[data-virtual-list-item-key]:focus-within .dspicker-trigger-wrap,
-.dspicker-trigger-wrap:focus-within {
-  opacity: 1;
-}
+/* 挂入官方操作栏时，显隐由站点 toolbar opacity 控制 */
 
 .dspicker-trigger.ds-button,
 .dspicker-export-trigger.ds-button {

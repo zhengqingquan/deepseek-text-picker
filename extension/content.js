@@ -5,9 +5,9 @@
   const pending = new Map();
 
   /** Chrome i18n；缺 key 时回退到 key 本身，便于发现漏译 */
-  function t(key, substitutions) {
+  function t(key) {
     try {
-      const msg = chrome.i18n.getMessage(key, substitutions);
+      const msg = chrome.i18n.getMessage(key);
       if (msg) return msg;
     } catch (_) {
       /* ignore */
@@ -952,9 +952,7 @@
 
   function detachButton(item) {
     item
-      .querySelectorAll(
-        ".dspicker-trigger, .dspicker-export-trigger, .dspicker-trigger-wrap"
-      )
+      .querySelectorAll(".dspicker-trigger, .dspicker-export-trigger")
       .forEach((el) => {
         el.remove();
       });
@@ -977,11 +975,12 @@
     }
 
     const toolbar = findAssistantToolbar(item);
+    if (!toolbar) return;
+
     let existingRaw = item.querySelector(".dspicker-trigger");
     let existingExport = item.querySelector(".dspicker-export-trigger");
 
-    if (existingRaw && toolbar && !toolbar.contains(existingRaw)) {
-      const wrap = existingRaw.closest(".dspicker-trigger-wrap");
+    if (existingRaw && !toolbar.contains(existingRaw)) {
       if (existingExport && !toolbar.contains(existingExport)) {
         placePickerButtons(toolbar, existingExport, existingRaw);
       } else if (existingExport) {
@@ -989,7 +988,6 @@
       } else {
         toolbar.appendChild(existingRaw);
       }
-      if (wrap) wrap.remove();
       existingRaw = item.querySelector(".dspicker-trigger");
       existingExport = item.querySelector(".dspicker-export-trigger");
     }

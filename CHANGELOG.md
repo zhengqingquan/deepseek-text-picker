@@ -12,6 +12,7 @@
 
 - 导出会话默认勾选到末条时改为写入 `selectedMessages: "all"`，底部「全选」同步勾选（此前写入完整 id 数组时各条已勾但底栏未勾）
 - 修复导出会话卡死：底栏补丁勿在每次 `patchNativeShareBar` 重写 `textContent`（会触发 MutationObserver 死循环）
+- 移除已无用的 `.dspicker-trigger-wrap` 样式与挂载清理残留（按钮已直接挂官方 toolbar）
 
 ### 变更
 
