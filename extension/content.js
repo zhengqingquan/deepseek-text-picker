@@ -467,12 +467,7 @@
   /** 隐藏官方确认按钮，独立按钮对齐其位置与外观 */
   function patchNativeShareBar() {
     if (!exportFlow.hijack) return;
-    // 预览弹层打开时不刷新底栏，避免盖住弹层
-    if (exportModalEl && !exportModalEl.hidden) {
-      const layer = document.querySelector(".dspicker-export-confirm-layer");
-      if (layer) layer.hidden = true;
-      return;
-    }
+    // 预览弹层打开时仍保持底栏补丁（按钮在遮罩下方），返回后无需重建
 
     let natives = findNativeCreateLinkButtons();
     if (!natives.length) {
@@ -541,6 +536,8 @@
           exportFlow.seenSelecting = true;
           return;
         }
+        // 预览打开时不要因短暂 not selecting 结束劫持（否则「创建导出内容」会没掉）
+        if (exportModalEl && !exportModalEl.hidden) return;
         if (exportFlow.seenSelecting && !st.selecting) {
           void stopExportHijack();
         }
