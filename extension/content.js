@@ -822,6 +822,30 @@
     return false;
   }
 
+  /** 临时/流式消息 id（官方常用 <= -2） */
+  function isTempMessageKey(key) {
+    const n = Number(key);
+    return !Number.isNaN(n) && n <= -2;
+  }
+
+  /**
+   * 生成中勿挂载：尚无官方操作栏，或只有「停止」等单个按钮。
+   * 完成后通常会出现复制/重新生成等一组图标。
+   */
+  function shouldAttachPicker(item) {
+    if (!isAssistantItem(item)) return false;
+    const key = item.getAttribute("data-virtual-list-item-key");
+    if (key == null || key === "" || isTempMessageKey(key)) return false;
+
+    const toolbar = findAssistantToolbar(item);
+    if (!toolbar) return false;
+
+    const natives = toolbar.querySelectorAll(
+      ".ds-button.ds-button--icon:not(.dspicker-trigger):not(.dspicker-export-trigger)"
+    );
+    return natives.length >= 2;
+  }
+
   function createRawIconSvg() {
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
@@ -922,7 +946,7 @@
     if (key == null || key === "") return;
     if (!item.querySelector(".ds-message")) return;
 
-    if (!isAssistantItem(item)) {
+    if (!shouldAttachPicker(item)) {
       detachButton(item);
       return;
     }
@@ -958,23 +982,8 @@
     const rawBtn = existingRaw || createTriggerButton(key);
     const exportBtn = existingExport || createExportTriggerButton(key);
 
-    if (toolbar) {
-      placePickerButtons(toolbar, exportBtn, rawBtn);
-      return;
-    }
-
-    let wrap = item.querySelector(".dspicker-trigger-wrap");
-    if (!wrap) {
-      wrap = document.createElement("div");
-      wrap.className = "dspicker-trigger-wrap";
-      const message = item.querySelector(".ds-message");
-      if (message) {
-        message.insertAdjacentElement("afterend", wrap);
-      } else {
-        item.appendChild(wrap);
-      }
-    }
-    placePickerButtons(wrap, exportBtn, rawBtn);
+    // 仅挂到官方操作栏；生成中无栏时上面已 detach
+    placePickerButtons(toolbar, exportBtn, rawBtn);
   }
 
   function scanAndAttach() {
