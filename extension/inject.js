@@ -774,37 +774,142 @@
     return false;
   }
 
-  function beginExportSelection() {
-    const sessionId = getSessionId();
-    if (!sessionId) return { ok: false, error: "no_session" };
+  /** 从会话开头截到 untilMessageId（含）；找不到则 "all"。保留原始 id 类型供 includes 勾选。 */
+  function selectionRangeUntil(sessionId, untilMessageId) {
+    if (untilMessageId == null || String(untilMessageId) === "") return "all";
+    const store = refreshStoreState();
+    if (!store) return "all";
+    // 优先主分支原始 id（勿 String 化，否则 checkbox includes 对不上）
+    let ordered = getMessagePathIds(store, sessionId);
+    if (!ordered.length) {
+      const session =
+        (store.sessionStore &&
+          (store.sessionStore[sessionId] ||
+            store.sessionStore[String(sessionId)])) ||
+        (typeof store.getSession === "function"
+          ? store.getSession(sessionId)
+          : null);
+      ordered = orderMessageIds(
+        store,
+        sessionId,
+        session && session.messageStore
+      );
+    }
+    if (!ordered.length) return "all";
+    const until = String(untilMessageId);
+    const idx = ordered.findIndex((id) => String(id) === until);
+    if (idx < 0) return "all";
+    return ordered.slice(0, idx + 1);
+  }
 
-    installShareCreateNetworkBlocker();
-    exportHijack = true;
+  /**
+   * 官方 enterSelection(sessionId, ids) 会对每个 id toggle；
+   * 而 toggle 会同时加入配对消息，把整段 path 传入会互相抵消导致全不勾。
+   * 因此部分勾选：先 enter 空选，再直接 setState。
+   */
+  function setShareSelectedMessages(selected) {
+    const share = findShareStore();
+    if (share && share.api && typeof share.api.setState === "function") {
+      try {
+        share.api.setState({ selectedMessages: selected });
+        return true;
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return false;
+  }
 
+  /** 仅取助手消息 id，供 toggle 回退（每次 toggle 会带上配对的用户消息） */
+  function assistantIdsInRange(sessionId, ids) {
+    const store = refreshStoreState();
+    if (!store || !Array.isArray(ids)) return [];
+    const out = [];
+    for (const id of ids) {
+      const raw = readMessageFromSession(store, sessionId, id);
+      const role = String((raw && raw.role) || "").toUpperCase();
+      if (role === "ASSISTANT") out.push(id);
+    }
+    return out;
+  }
+
+  function applyExportSelection(sessionId, selected) {
     let ctrl = findShareController();
     if (ctrl) {
       patchCreateShareIfNeeded(ctrl);
-      ctrl.enterSelection(sessionId, "all");
-      return { ok: true, sessionId, hijack: true };
+      if (selected === "all") {
+        ctrl.enterSelection(sessionId, "all");
+        return true;
+      }
+      // 第二参不传：plainStore 置 selectedMessages=[]，再直接写入目标列表
+      try {
+        ctrl.enterSelection(sessionId);
+      } catch (_) {
+        try {
+          ctrl.enterSelection(sessionId, null);
+        } catch (__) {
+          /* ignore */
+        }
+      }
+      if (!setShareSelectedMessages(selected)) {
+        // 回退：只 toggle 助手 id，避免成对抵消
+        const assistants = assistantIdsInRange(sessionId, selected);
+        try {
+          ctrl.enterSelection(
+            sessionId,
+            assistants.length ? assistants : selected.slice(-1)
+          );
+        } catch (_) {
+          /* ignore */
+        }
+      } else {
+        [0, 40, 120].forEach((ms) => {
+          window.setTimeout(() => setShareSelectedMessages(selected), ms);
+        });
+      }
+      return true;
     }
 
     const share = findShareStore();
-    if (!share) {
-      exportHijack = false;
-      return { ok: false, error: "no_share_api" };
-    }
+    if (!share) return false;
     share.state.enterSelection(sessionId);
-    if (share.api && typeof share.api.setState === "function") {
-      share.api.setState({ selectedMessages: "all" });
+    if (selected === "all") {
+      setShareSelectedMessages("all");
+    } else {
+      setShareSelectedMessages(selected);
+      [0, 40, 120].forEach((ms) => {
+        window.setTimeout(() => setShareSelectedMessages(selected), ms);
+      });
     }
-    // 进入选对话后再找一次 controller，补丁 createShare
     try {
       ctrl = findShareController();
       if (ctrl) patchCreateShareIfNeeded(ctrl);
     } catch (_) {
       /* ignore */
     }
-    return { ok: true, sessionId, hijack: true };
+    return true;
+  }
+
+  function beginExportSelection(untilMessageId) {
+    const sessionId = getSessionId();
+    if (!sessionId) return { ok: false, error: "no_session" };
+
+    installShareCreateNetworkBlocker();
+    exportHijack = true;
+
+    const selected = selectionRangeUntil(sessionId, untilMessageId);
+    if (!applyExportSelection(sessionId, selected)) {
+      exportHijack = false;
+      return { ok: false, error: "no_share_api" };
+    }
+
+    return {
+      ok: true,
+      sessionId,
+      hijack: true,
+      untilMessageId: untilMessageId != null ? String(untilMessageId) : null,
+      selectedCount: selected === "all" ? null : selected.length,
+    };
   }
 
   function getExportSelection() {
@@ -1095,7 +1200,11 @@
     if (data.type === "begin_export_selection") {
       const reqId = data.reqId;
       try {
-        const result = beginExportSelection();
+        const until =
+          data.untilMessageId != null && String(data.untilMessageId) !== ""
+            ? String(data.untilMessageId)
+            : null;
+        const result = beginExportSelection(until);
         emit({ type: "begin_export_selection_result", reqId, ...result });
       } catch (err) {
         exportHijack = false;

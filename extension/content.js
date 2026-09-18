@@ -28,8 +28,12 @@
     return postRequest("export_session", extra, 8000);
   }
 
-  function beginExportSelectionRaw() {
-    return postRequest("begin_export_selection", {}, 5000);
+  function beginExportSelectionRaw(untilMessageId) {
+    const extra =
+      untilMessageId != null && String(untilMessageId) !== ""
+        ? { untilMessageId: String(untilMessageId) }
+        : {};
+    return postRequest("begin_export_selection", extra, 5000);
   }
 
   function getExportSelectionRaw() {
@@ -205,7 +209,7 @@
     /创建公开链接|Create public link|Create link|Create and copy|创建并复制|确认并复制|Copy link|Confirm and copy/i;
   const SHARE_CANCEL_RE = /^(取消|Cancel)$/i;
 
-  /** @type {{ hijack: boolean, patching: boolean, seenSelecting: boolean, observer: MutationObserver|null, pollTimer: number, docClickBound: boolean }} */
+  /** @type {{ hijack: boolean, patching: boolean, seenSelecting: boolean, observer: MutationObserver|null, pollTimer: number, docClickBound: boolean, untilMessageId: string|null }} */
   const exportFlow = {
     hijack: false,
     patching: false,
@@ -213,6 +217,7 @@
     observer: null,
     pollTimer: 0,
     docClickBound: false,
+    untilMessageId: null,
   };
 
   function formatExportTime(ms) {
@@ -564,13 +569,20 @@
     }, 400);
   }
 
-  async function startExportSelection() {
+  async function startExportSelection(untilMessageId) {
     if (exportFlow.hijack) return;
     if (exportModalEl && !exportModalEl.hidden) closeExportModal();
 
+    const until =
+      untilMessageId != null && String(untilMessageId) !== ""
+        ? String(untilMessageId)
+        : null;
+    exportFlow.untilMessageId = until;
+
     try {
-      const begun = await beginExportSelectionRaw();
+      const begun = await beginExportSelectionRaw(until);
       if (!begun || !begun.ok) {
+        exportFlow.untilMessageId = null;
         const err = begun && begun.error;
         openExportModalError(
           err === "no_session"
@@ -587,6 +599,7 @@
       [50, 200, 500].forEach((ms) => window.setTimeout(patchNativeShareBar, ms));
     } catch (_) {
       exportFlow.hijack = false;
+      exportFlow.untilMessageId = null;
       openExportModalError("进入选对话超时，请刷新页面后重试。");
     }
   }
@@ -702,6 +715,7 @@
   function closeExportModal() {
     hideExportModalOnly();
     if (exportFlow.hijack) void stopExportHijack();
+    exportFlow.untilMessageId = null;
   }
 
   /** 关闭预览，回到官方选对话勾选态（返回 / Esc / 点遮罩） */
@@ -713,7 +727,7 @@
       [50, 200, 500].forEach((ms) => window.setTimeout(patchNativeShareBar, ms));
       return;
     }
-    void startExportSelection();
+    void startExportSelection(exportFlow.untilMessageId);
   }
 
   function openExportModalError(message) {
@@ -823,12 +837,12 @@
     );
   }
 
-  function createExportTriggerButton() {
+  function createExportTriggerButton(messageKey) {
     return createIconToolbarButton(
       "dspicker-export-trigger",
       "导出会话",
       createExportIconSvg(),
-      () => startExportSelection()
+      () => startExportSelection(messageKey)
     );
   }
 
@@ -898,7 +912,7 @@
     }
 
     const rawBtn = existingRaw || createTriggerButton(key);
-    const exportBtn = existingExport || createExportTriggerButton();
+    const exportBtn = existingExport || createExportTriggerButton(key);
 
     if (toolbar) {
       placePickerButtons(toolbar, exportBtn, rawBtn);
@@ -959,6 +973,7 @@
       }
       if (exportFlow.hijack) {
         void stopExportHijack();
+        exportFlow.untilMessageId = null;
         return;
       }
       if (modalEl && !modalEl.hidden) closeModal();
