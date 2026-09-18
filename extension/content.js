@@ -616,7 +616,11 @@
       backdropPointerDown = e.target === root;
     });
     root.addEventListener("click", (e) => {
-      if (e.target === root && backdropPointerDown) closeExportModal();
+      // 点遮罩：有选对话时等同「返回」，否则关闭
+      if (e.target === root && backdropPointerDown) {
+        if (exportFlow.hijack) returnToExportSelection();
+        else closeExportModal();
+      }
       backdropPointerDown = false;
     });
 
@@ -680,13 +684,13 @@
     setExportBackVisible(exportModalEl, false);
   }
 
-  /** 关闭预览并退出选对话（关闭 / 遮罩 / Esc） */
+  /** 关闭预览并退出选对话（仅「关闭」按钮） */
   function closeExportModal() {
     hideExportModalOnly();
     if (exportFlow.hijack) void stopExportHijack();
   }
 
-  /** 关闭预览，回到官方选对话勾选态 */
+  /** 关闭预览，回到官方选对话勾选态（返回 / Esc / 点遮罩） */
   function returnToExportSelection() {
     if (!exportModalEl) return;
     hideExportModalOnly();
@@ -933,9 +937,10 @@
     });
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
-      // 预览打开时优先关掉弹层（并退出选对话）；否则退出选对话
+      // 预览打开时 Esc = 返回选对话；无选对话则关闭；否则退出选对话
       if (exportModalEl && !exportModalEl.hidden) {
-        closeExportModal();
+        if (exportFlow.hijack) returnToExportSelection();
+        else closeExportModal();
         return;
       }
       if (exportFlow.hijack) {
