@@ -1,5 +1,7 @@
 # DeepSeek Text Picker
 
+[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md)
+
 <img src="extension/icons/icon128.png" width="64" alt="DeepSeek Text Picker">
 
 Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回答旁显示「原文」图标，展示与官方「复制」一致的 Markdown；并可导出当前会话整段对话。

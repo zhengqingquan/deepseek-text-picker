@@ -8,6 +8,7 @@
 
 - 多语言：Chrome `_locales` + `chrome.i18n`（默认 `zh_CN`，另提供 `zh_TW` / `zh_HK` / `en`）；界面跟随浏览器 UI 语言
 - 匹配 DeepSeek 官方底栏时兼容繁体文案（如「全選」「建立公開連結」）
+- 仓库文档增加英文 / 繁体 README（`README.en.md` / `README.zh-TW.md`），各语言文首可互跳
 
 ### 修复
 
