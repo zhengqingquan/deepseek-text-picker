@@ -3,6 +3,9 @@
   const CHUNK_KEY = "rspackChunk_deepseek_chat";
   let cachedStore = null;
   let cachedStoreApi = null;
+  let cachedShareApi = null;
+  let cachedShareController = null;
+  let exportHijack = false;
 
   function emit(payload) {
     try {
@@ -307,10 +310,6 @@
     return [childIds.slice(0, idx), childIds.slice(idx)];
   }
 
-  function readRawMessage(store, sid, mid) {
-    return readMessageFromSession(store, sid, mid);
-  }
-
   /**
    * 对齐官方 getMessagePathItems：沿 rootBranchIds[rootBranchIndex]
    * + childIds[currentChildIndex] 走当前主分支。
@@ -335,7 +334,7 @@
     if (cur != null) push(cur);
 
     while (cur != null) {
-      const msg = readRawMessage(store, sessionId, cur);
+      const msg = readMessageFromSession(store, sessionId, cur);
       if (!msg) break;
       const childIds = Array.isArray(msg.childIds) ? msg.childIds : [];
       const [temps] = splitLeadingTempIds(childIds);
@@ -400,22 +399,28 @@
   function exportMessageEntry(raw, fallbackId) {
     const msg = normalizeMessage(raw, fallbackId);
     if (!msg) return null;
+    const id = msg.message_id || (fallbackId != null ? String(fallbackId) : "");
     const role = String(msg.role || "").toUpperCase();
     if (role === "USER") {
       const content = getRequestContent(msg).trim();
       if (!content) return null;
-      return { role: "USER", content, think: "" };
+      return { id, role: "USER", content, think: "" };
     }
     if (role === "ASSISTANT" || getResponseContent(msg)) {
       const content = toCopyContent(msg);
       const think = getThinkContent(msg);
       if (!content && !think) return null;
-      return { role: "ASSISTANT", content: content || "", think: think || "" };
+      return {
+        id,
+        role: "ASSISTANT",
+        content: content || "",
+        think: think || "",
+      };
     }
     return null;
   }
 
-  function exportSession() {
+  function exportSession(messageIds) {
     const store = refreshStoreState();
     if (!store) {
       return { ok: false, error: "no_store" };
@@ -438,6 +443,10 @@
         ? String(session.title).trim()
         : "";
     const orderedIds = orderMessageIds(store, sessionId, session.messageStore);
+    const filterSet =
+      Array.isArray(messageIds) && messageIds.length
+        ? new Set(messageIds.map(String))
+        : null;
     const messages = [];
     const seen = new Set();
 
@@ -445,7 +454,8 @@
       const key = String(mid);
       if (seen.has(key)) continue;
       seen.add(key);
-      const raw = readRawMessage(store, sessionId, mid);
+      if (filterSet && !filterSet.has(key)) continue;
+      const raw = readMessageFromSession(store, sessionId, mid);
       const entry = exportMessageEntry(raw, mid);
       if (entry) messages.push(entry);
     }
@@ -455,6 +465,418 @@
     }
 
     return { ok: true, sessionId, title, messages };
+  }
+
+  /** 分享选对话 zustand：selectedMessages + enterSelection */
+  function looksLikeShareStore(obj) {
+    return (
+      obj &&
+      typeof obj === "object" &&
+      "selectedMessages" in obj &&
+      typeof obj.enterSelection === "function" &&
+      typeof obj.exitSelection === "function"
+    );
+  }
+
+  function unwrapShareStore(candidate) {
+    if (
+      !candidate ||
+      (typeof candidate !== "object" && typeof candidate !== "function")
+    ) {
+      return null;
+    }
+    if (looksLikeShareStore(candidate)) {
+      return { state: candidate, api: null };
+    }
+    if (typeof candidate.getState === "function") {
+      try {
+        const state = candidate.getState();
+        if (looksLikeShareStore(state)) {
+          return {
+            state,
+            api: candidate,
+          };
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return null;
+  }
+
+  function pickShareStoreFromExports(exp) {
+    if (!exp || (typeof exp !== "object" && typeof exp !== "function")) return null;
+    const candidates = [exp.Q, exp.J, exp.default, exp];
+    try {
+      for (const v of Object.values(exp)) candidates.push(v);
+    } catch (_) {
+      /* ignore */
+    }
+    for (const c of candidates) {
+      const hit = unwrapShareStore(c);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  function findShareStoreViaRspack() {
+    const chunks = self[CHUNK_KEY];
+    if (!Array.isArray(chunks)) return null;
+
+    let requireFn = null;
+    const chunkId = "ds-tp-share-" + Math.random().toString(36).slice(2, 10);
+    try {
+      chunks.push([
+        [chunkId],
+        {},
+        (req) => {
+          requireFn = req;
+        },
+      ]);
+    } catch (_) {
+      return null;
+    }
+    if (!requireFn || !requireFn.m) return null;
+
+    for (const id of Object.keys(requireFn.m)) {
+      const factory = requireFn.m[id];
+      if (typeof factory !== "function") continue;
+
+      let executed = false;
+      requireFn.m[id] = function patched(module, exports, req) {
+        executed = true;
+        return factory.apply(this, arguments);
+      };
+
+      try {
+        const exp = requireFn(id);
+        if (executed) continue;
+        const hit = pickShareStoreFromExports(exp);
+        if (hit) return hit;
+      } catch (_) {
+        /* ignore */
+      } finally {
+        requireFn.m[id] = factory;
+      }
+    }
+    return null;
+  }
+
+  function looksLikeShareController(obj) {
+    return (
+      obj &&
+      typeof obj === "object" &&
+      typeof obj.enterSelection === "function" &&
+      typeof obj.exitSelection === "function" &&
+      typeof obj.getSelectedMessages === "function"
+    );
+  }
+
+  function findShareControllerViaFiber() {
+    const roots = [
+      document.getElementById("root"),
+      document.body,
+      document.documentElement,
+    ].filter(Boolean);
+
+    for (const root of roots) {
+      const start = fiberFromNode(root);
+      if (!start) continue;
+      const seen = new Set();
+      const queue = [start];
+      while (queue.length && seen.size < 10000) {
+        const fiber = queue.shift();
+        if (!fiber || seen.has(fiber)) continue;
+        seen.add(fiber);
+
+        const props = fiber.memoizedProps;
+        if (props && typeof props === "object") {
+          if (looksLikeShareController(props.shareController)) {
+            return props.shareController;
+          }
+          if (looksLikeShareController(props.value && props.value.shareController)) {
+            return props.value.shareController;
+          }
+          for (const v of Object.values(props)) {
+            if (looksLikeShareController(v)) return v;
+            if (v && typeof v === "object" && looksLikeShareController(v.shareController)) {
+              return v.shareController;
+            }
+          }
+        }
+
+        let hook = fiber.memoizedState;
+        let guard = 0;
+        while (hook && guard++ < 40) {
+          const ms = hook.memoizedState;
+          if (looksLikeShareController(ms)) return ms;
+          if (ms && typeof ms === "object" && looksLikeShareController(ms.current)) {
+            return ms.current;
+          }
+          hook = hook.next;
+        }
+
+        if (fiber.child) queue.push(fiber.child);
+        if (fiber.sibling) queue.push(fiber.sibling);
+      }
+    }
+    return null;
+  }
+
+  function findShareStore() {
+    if (cachedShareApi && typeof cachedShareApi.getState === "function") {
+      try {
+        const st = cachedShareApi.getState();
+        if (looksLikeShareStore(st)) return { state: st, api: cachedShareApi };
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    let hit = null;
+    try {
+      hit = findShareStoreViaRspack();
+    } catch (_) {
+      hit = null;
+    }
+    if (hit) {
+      cachedShareApi = hit.api;
+      return hit;
+    }
+    return null;
+  }
+
+  function findShareController() {
+    if (cachedShareController && looksLikeShareController(cachedShareController)) {
+      return cachedShareController;
+    }
+    let ctrl = null;
+    try {
+      ctrl = findShareControllerViaFiber();
+    } catch (_) {
+      ctrl = null;
+    }
+    if (ctrl) {
+      cachedShareController = ctrl;
+      patchCreateShareIfNeeded(ctrl);
+      return ctrl;
+    }
+    return null;
+  }
+
+  function patchCreateShareIfNeeded(ctrl) {
+    if (!ctrl || typeof ctrl.createShare !== "function") return;
+    if (ctrl.__dspickerCreateSharePatched) return;
+    const original = ctrl.createShare.bind(ctrl);
+    ctrl.createShare = async function patchedCreateShare() {
+      if (exportHijack) {
+        const err = new Error("dspicker_export_hijack");
+        err.code = "dspicker_export_hijack";
+        throw err;
+      }
+      return original.apply(this, arguments);
+    };
+    ctrl.__dspickerCreateSharePatched = true;
+  }
+
+  /** 兜底：劫持态拦截分享创建请求，防止确认拦失败时仍生成链接 */
+  function installShareCreateNetworkBlocker() {
+    if (window.__dspickerShareNetPatched) return;
+    window.__dspickerShareNetPatched = true;
+
+    const isShareCreateUrl = (url) =>
+      typeof url === "string" && /\/api\/v0\/share\/create\b/.test(url);
+
+    const origFetch = window.fetch;
+    if (typeof origFetch === "function") {
+      window.fetch = function dspickerFetch(input, init) {
+        const url =
+          typeof input === "string"
+            ? input
+            : input && typeof input.url === "string"
+              ? input.url
+              : "";
+        if (exportHijack && isShareCreateUrl(url)) {
+          return Promise.reject(new Error("dspicker_export_hijack"));
+        }
+        return origFetch.apply(this, arguments);
+      };
+    }
+
+    const XO = XMLHttpRequest.prototype.open;
+    const XS = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function (method, url) {
+      this.__dspickerUrl = url;
+      return XO.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.send = function () {
+      if (exportHijack && isShareCreateUrl(String(this.__dspickerUrl || ""))) {
+        try {
+          this.abort();
+        } catch (_) {
+          /* ignore */
+        }
+        return;
+      }
+      return XS.apply(this, arguments);
+    };
+  }
+
+  function isShareSelecting() {
+    // 1) share zustand
+    const share = findShareStore();
+    if (share) {
+      try {
+        const st =
+          share.api && typeof share.api.getState === "function"
+            ? share.api.getState()
+            : share.state;
+        if (st && st.currentSessionId != null) return true;
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    // 2) controller.plainStore
+    const ctrl = findShareController();
+    if (ctrl) {
+      try {
+        const st =
+          typeof ctrl.plainStore === "object"
+            ? ctrl.plainStore
+            : null;
+        if (st && st.currentSessionId != null) return true;
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    // 3) DOM：底栏仍在（取消/创建公开链接/我们的导出所选）
+    try {
+      const buttons = document.querySelectorAll('.ds-button, [role="button"]');
+      for (const el of buttons) {
+        const t = ((el.textContent || "") + "").replace(/\s+/g, " ").trim();
+        if (/创建公开链接|Create public link|导出所选|全选|Select all/i.test(t)) {
+          // 需同时像底栏（靠近视口底部）
+          const rect = el.getBoundingClientRect();
+          if (rect.bottom > window.innerHeight - 120 && rect.height > 0) {
+            return true;
+          }
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return false;
+  }
+
+  function beginExportSelection() {
+    const sessionId = getSessionId();
+    if (!sessionId) return { ok: false, error: "no_session" };
+
+    installShareCreateNetworkBlocker();
+    exportHijack = true;
+
+    let ctrl = findShareController();
+    if (ctrl) {
+      patchCreateShareIfNeeded(ctrl);
+      ctrl.enterSelection(sessionId, "all");
+      return { ok: true, sessionId, hijack: true };
+    }
+
+    const share = findShareStore();
+    if (!share) {
+      exportHijack = false;
+      return { ok: false, error: "no_share_api" };
+    }
+    share.state.enterSelection(sessionId);
+    if (share.api && typeof share.api.setState === "function") {
+      share.api.setState({ selectedMessages: "all" });
+    }
+    // 进入选对话后再找一次 controller，补丁 createShare
+    try {
+      ctrl = findShareController();
+      if (ctrl) patchCreateShareIfNeeded(ctrl);
+    } catch (_) {
+      /* ignore */
+    }
+    return { ok: true, sessionId, hijack: true };
+  }
+
+  function getExportSelection() {
+    const sessionId = getSessionId();
+    if (!sessionId) return { ok: false, error: "no_session" };
+
+    const ctrl = findShareController();
+    if (ctrl) {
+      const ids = ctrl.getSelectedMessages(sessionId) || [];
+      return {
+        ok: true,
+        sessionId,
+        messageIds: ids.map(String),
+        hijack: exportHijack,
+        selecting: isShareSelecting(),
+      };
+    }
+
+    const share = findShareStore();
+    if (!share) return { ok: false, error: "no_share_api" };
+    const st =
+      share.api && typeof share.api.getState === "function"
+        ? share.api.getState()
+        : share.state;
+    if (!st || st.currentSessionId == null) {
+      return { ok: false, error: "not_selecting", hijack: exportHijack };
+    }
+    let ids = st.selectedMessages;
+    if (ids === "all") {
+      const chat = refreshStoreState();
+      const session =
+        chat &&
+        chat.sessionStore &&
+        (chat.sessionStore[sessionId] || chat.sessionStore[String(sessionId)]);
+      ids = orderMessageIds(
+        chat,
+        sessionId,
+        session && session.messageStore
+      );
+    } else if (!Array.isArray(ids)) {
+      ids = [];
+    }
+    return {
+      ok: true,
+      sessionId,
+      messageIds: ids.map(String),
+      hijack: exportHijack,
+      selecting: true,
+    };
+  }
+
+  function endExportSelection() {
+    exportHijack = false;
+    const ctrl = findShareController();
+    if (ctrl) {
+      try {
+        ctrl.exitSelection();
+      } catch (_) {
+        /* ignore */
+      }
+      return { ok: true };
+    }
+    const share = findShareStore();
+    if (share && share.state && typeof share.state.exitSelection === "function") {
+      try {
+        share.state.exitSelection();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return { ok: true };
+  }
+
+  function getExportHijackStatus() {
+    return {
+      ok: true,
+      hijack: exportHijack,
+      selecting: isShareSelecting(),
+    };
   }
 
   function messageFromMessageBody(props, want) {
@@ -649,11 +1071,78 @@
     if (data.type === "export_session") {
       const reqId = data.reqId;
       try {
-        const result = exportSession();
+        const ids = Array.isArray(data.messageIds) ? data.messageIds : null;
+        const result = exportSession(ids);
         emit({ type: "export_session_result", reqId, ...result });
       } catch (err) {
         emit({
           type: "export_session_result",
+          reqId,
+          ok: false,
+          error: String(err && err.message ? err.message : err),
+        });
+      }
+      return;
+    }
+
+    if (data.type === "begin_export_selection") {
+      const reqId = data.reqId;
+      try {
+        const result = beginExportSelection();
+        emit({ type: "begin_export_selection_result", reqId, ...result });
+      } catch (err) {
+        exportHijack = false;
+        emit({
+          type: "begin_export_selection_result",
+          reqId,
+          ok: false,
+          error: String(err && err.message ? err.message : err),
+        });
+      }
+      return;
+    }
+
+    if (data.type === "get_export_selection") {
+      const reqId = data.reqId;
+      try {
+        const result = getExportSelection();
+        emit({ type: "get_export_selection_result", reqId, ...result });
+      } catch (err) {
+        emit({
+          type: "get_export_selection_result",
+          reqId,
+          ok: false,
+          error: String(err && err.message ? err.message : err),
+        });
+      }
+      return;
+    }
+
+    if (data.type === "end_export_selection") {
+      const reqId = data.reqId;
+      try {
+        const result = endExportSelection();
+        emit({ type: "end_export_selection_result", reqId, ...result });
+      } catch (err) {
+        exportHijack = false;
+        emit({
+          type: "end_export_selection_result",
+          reqId,
+          ok: false,
+          error: String(err && err.message ? err.message : err),
+        });
+      }
+      return;
+    }
+
+    if (data.type === "export_hijack_status") {
+      const reqId = data.reqId;
+      try {
+        const result = getExportHijackStatus();
+        emit({ type: "export_hijack_status_result", reqId, ...result });
+      } catch (err) {
+        emit({
+          type: "export_hijack_status_result",
           reqId,
           ok: false,
           error: String(err && err.message ? err.message : err),
@@ -698,6 +1187,8 @@
   const warm = () => {
     try {
       findChatStore();
+      findShareStore();
+      findShareController();
     } catch (_) {
       /* ignore */
     }
@@ -710,6 +1201,4 @@
     setTimeout(warm, 500);
   }
   setTimeout(warm, 2000);
-
-  emit({ type: "hook_ready" });
 })();

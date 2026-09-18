@@ -187,3 +187,31 @@
   max-height: min(85vh, 800px);
 }
 
+html.dspicker-export-hijack [data-dspicker-native-hidden="1"] {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.dspicker-export-confirm-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+}
+
+.dspicker-export-confirm-layer[hidden] {
+  display: none !important;
+}
+
+.dspicker-export-confirm-cover {
+  position: fixed;
+  pointer-events: auto;
+  cursor: pointer;
+  box-sizing: border-box;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  z-index: 2147483001;
+}
+

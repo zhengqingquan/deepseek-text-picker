@@ -20,17 +20,44 @@
     return postRequest("resolve", { messageId: String(messageId) }, 3000);
   }
 
-  function exportSessionRaw() {
-    return postRequest("export_session", {}, 8000);
+  function exportSessionRaw(messageIds) {
+    const extra =
+      Array.isArray(messageIds) && messageIds.length
+        ? { messageIds: messageIds.map(String) }
+        : {};
+    return postRequest("export_session", extra, 8000);
   }
+
+  function beginExportSelectionRaw() {
+    return postRequest("begin_export_selection", {}, 5000);
+  }
+
+  function getExportSelectionRaw() {
+    return postRequest("get_export_selection", {}, 5000);
+  }
+
+  function endExportSelectionRaw() {
+    return postRequest("end_export_selection", {}, 5000);
+  }
+
+  function exportHijackStatusRaw() {
+    return postRequest("export_hijack_status", {}, 3000);
+  }
+
+  const RESULT_TYPES = new Set([
+    "resolve_result",
+    "export_session_result",
+    "begin_export_selection_result",
+    "get_export_selection_result",
+    "end_export_selection_result",
+    "export_hijack_status_result",
+  ]);
 
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     const data = event.data;
     if (!data || data.source !== SOURCE) return;
-    if (data.type !== "resolve_result" && data.type !== "export_session_result") {
-      return;
-    }
+    if (!RESULT_TYPES.has(data.type)) return;
     const entry = pending.get(data.reqId);
     if (!entry) return;
     window.clearTimeout(entry.timer);
@@ -171,7 +198,22 @@
     root.hidden = false;
   }
 
-  /* ---------------- UI: 导出会话 ---------------- */
+  /* ---------------- UI: 导出会话（复用官方分享选对话） ---------------- */
+
+  const EXPORT_CONFIRM_LABEL = "导出所选";
+  const SHARE_CONFIRM_RE =
+    /创建公开链接|导出所选|Create public link|Create link|Create and copy|创建并复制|确认并复制|Copy link|Confirm and copy/i;
+  const SHARE_CANCEL_RE = /^(取消|Cancel)$/i;
+
+  /** @type {{ hijack: boolean, patching: boolean, seenSelecting: boolean, observer: MutationObserver|null, pollTimer: number, docClickBound: boolean }} */
+  const exportFlow = {
+    hijack: false,
+    patching: false,
+    seenSelecting: false,
+    observer: null,
+    pollTimer: 0,
+    docClickBound: false,
+  };
 
   function buildExportMarkdown(payload, includeThink) {
     const title =
@@ -218,6 +260,287 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function buttonLabelText(el) {
+    if (!el) return "";
+    const textEl = el.querySelector(".ds-button__text");
+    return ((textEl && textEl.textContent) || el.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isShareConfirmButton(el) {
+    if (!el || el.closest(".dspicker-overlay")) return false;
+    if (el.closest(".dspicker-export-confirm-layer")) return true;
+    const btn = el.closest(".ds-button, [role='button']");
+    if (!btn || btn.closest(".dspicker-overlay")) return false;
+    const text = buttonLabelText(btn);
+    if (!text || SHARE_CANCEL_RE.test(text)) return false;
+    return SHARE_CONFIRM_RE.test(text);
+  }
+
+  function findNativeCreateLinkButtons() {
+    const out = [];
+    const seen = new Set();
+    const push = (el) => {
+      if (!el || seen.has(el)) return;
+      seen.add(el);
+      out.push(el);
+    };
+
+    document.querySelectorAll(".ds-button--primary, .ds-button, [role='button']").forEach((el) => {
+      if (el.closest(".dspicker-overlay, .dspicker-export-confirm-layer")) return;
+      if (el.classList.contains("dspicker-export-confirm-cover")) return;
+
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 40 || rect.height < 20) return;
+
+      const text = buttonLabelText(el);
+      if (SHARE_CANCEL_RE.test(text)) return;
+      if (SHARE_CONFIRM_RE.test(text)) {
+        push(el);
+        return;
+      }
+
+      // 文案异常时：底部 primary 且祖先含「全选」
+      if (
+        el.classList.contains("ds-button--primary") &&
+        rect.bottom > window.innerHeight - 100
+      ) {
+        let p = el.parentElement;
+        for (let i = 0; i < 6 && p; i++) {
+          const pt = (p.textContent || "").replace(/\s+/g, " ");
+          if (/全选|Select all/.test(pt) && /取消|Cancel|公开|link|Link/i.test(pt)) {
+            push(el);
+            return;
+          }
+          p = p.parentElement;
+        }
+      }
+    });
+    return out;
+  }
+
+  function cleanupExportHijackUi() {
+    exportFlow.hijack = false;
+    exportFlow.seenSelecting = false;
+    document.documentElement.classList.remove("dspicker-export-hijack");
+    const layer = document.querySelector(".dspicker-export-confirm-layer");
+    if (layer) layer.remove();
+    document.querySelectorAll("[data-dspicker-native-hidden='1']").forEach((el) => {
+      el.style.cssText = el.dataset.dspickerPrevStyle || "";
+      delete el.dataset.dspickerNativeHidden;
+      delete el.dataset.dspickerPrevStyle;
+    });
+  }
+
+  async function stopExportHijack() {
+    stopExportHijackWatchers();
+    try {
+      await endExportSelectionRaw();
+    } catch (_) {
+      /* ignore */
+    }
+    cleanupExportHijackUi();
+    scheduleScan();
+  }
+
+  function stopExportHijackWatchers() {
+    if (exportFlow.observer) {
+      exportFlow.observer.disconnect();
+      exportFlow.observer = null;
+    }
+    if (exportFlow.pollTimer) {
+      window.clearInterval(exportFlow.pollTimer);
+      exportFlow.pollTimer = 0;
+    }
+  }
+
+  async function confirmNativeExportSelection(e) {
+    if (!exportFlow.hijack || exportFlow.patching) return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+    exportFlow.patching = true;
+    try {
+      const sel = await getExportSelectionRaw();
+      if (!sel || !sel.ok) {
+        await stopExportHijack();
+        openExportModalError("未能读取已选对话，请重试。");
+        return;
+      }
+      const ids = Array.isArray(sel.messageIds) ? sel.messageIds : [];
+      if (!ids.length) {
+        exportFlow.patching = false;
+        return;
+      }
+      const result = await exportSessionRaw(ids);
+      await stopExportHijack();
+      if (!result || !result.ok || !Array.isArray(result.messages) || !result.messages.length) {
+        openExportModalError(
+          result && result.error === "empty"
+            ? "当前没有可导出的已选消息。"
+            : "导出会话失败，请刷新后重试。"
+        );
+        return;
+      }
+      openExportModal(result);
+    } catch (_) {
+      await stopExportHijack();
+      openExportModalError("导出会话超时，请刷新页面后重试。");
+    } finally {
+      exportFlow.patching = false;
+    }
+  }
+
+  function onExportHijackDocClick(e) {
+    if (!exportFlow.hijack || exportFlow.patching) return;
+    if (!isShareConfirmButton(e.target)) return;
+    confirmNativeExportSelection(e);
+  }
+
+  function ensureConfirmLayer() {
+    let layer = document.querySelector(".dspicker-export-confirm-layer");
+    if (layer) return layer;
+    layer = document.createElement("div");
+    layer.className = "dspicker-export-confirm-layer";
+    layer.hidden = true;
+    layer.innerHTML =
+      `<div class="dspicker-export-confirm-cover ds-button ds-button--primary ds-button--xl" role="button" tabindex="0">` +
+      `<div class="ds-button__background"></div>` +
+      `<span class="ds-button__text">${EXPORT_CONFIRM_LABEL}</span>` +
+      `</div>`;
+    const cover = layer.querySelector(".dspicker-export-confirm-cover");
+    cover.addEventListener("click", (ev) => confirmNativeExportSelection(ev));
+    cover.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        confirmNativeExportSelection(ev);
+      }
+    });
+    document.documentElement.appendChild(layer);
+    return layer;
+  }
+
+  function hideNativeCreateButtons(buttons) {
+    buttons.forEach((btn) => {
+      if (btn.dataset.dspickerNativeHidden === "1") return;
+      btn.dataset.dspickerNativeHidden = "1";
+      btn.dataset.dspickerPrevStyle = btn.getAttribute("style") || "";
+      btn.style.setProperty("visibility", "hidden", "important");
+      btn.style.setProperty("pointer-events", "none", "important");
+    });
+  }
+
+  /** 隐藏官方确认按钮，用 fixed 层盖上「导出所选」 */
+  function patchNativeShareBar() {
+    if (!exportFlow.hijack) return;
+
+    let natives = findNativeCreateLinkButtons();
+    if (!natives.length) {
+      document.querySelectorAll(".ds-button--primary").forEach((el) => {
+        if (el.closest(".dspicker-export-confirm-layer, .dspicker-overlay")) return;
+        const r = el.getBoundingClientRect();
+        if (r.width >= 48 && r.height >= 28 && r.bottom > window.innerHeight - 110) {
+          natives.push(el);
+        }
+      });
+    }
+
+    const layer = ensureConfirmLayer();
+    if (!natives.length) {
+      layer.hidden = true;
+      return;
+    }
+
+    hideNativeCreateButtons(natives);
+
+    const target =
+      natives.find((el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > window.innerHeight - 120 && r.width > 0;
+      }) || natives[0];
+    const rect = target.getBoundingClientRect();
+    if (rect.width < 8 || rect.height < 8) {
+      layer.hidden = true;
+      return;
+    }
+
+    layer.hidden = false;
+    const cover = layer.querySelector(".dspicker-export-confirm-cover");
+    cover.style.left = Math.round(rect.left) + "px";
+    cover.style.top = Math.round(rect.top) + "px";
+    cover.style.width = Math.round(rect.width) + "px";
+    cover.style.height = Math.round(rect.height) + "px";
+  }
+
+  function ensureDocClickHijack() {
+    if (exportFlow.docClickBound) return;
+    document.addEventListener("click", onExportHijackDocClick, true);
+    exportFlow.docClickBound = true;
+  }
+
+  function startExportHijackWatchers() {
+    stopExportHijackWatchers();
+    exportFlow.seenSelecting = false;
+    ensureDocClickHijack();
+    patchNativeShareBar();
+    exportFlow.observer = new MutationObserver(() => {
+      if (exportFlow.hijack) patchNativeShareBar();
+    });
+    exportFlow.observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+    exportFlow.pollTimer = window.setInterval(async () => {
+      if (!exportFlow.hijack || exportFlow.patching) return;
+      patchNativeShareBar();
+      try {
+        const st = await exportHijackStatusRaw();
+        if (!st || !st.ok) return;
+        if (st.selecting) {
+          exportFlow.seenSelecting = true;
+          return;
+        }
+        if (exportFlow.seenSelecting && !st.selecting) {
+          void stopExportHijack();
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    }, 400);
+  }
+
+  async function startExportSelection() {
+    if (exportFlow.hijack) return;
+    if (exportModalEl && !exportModalEl.hidden) closeExportModal();
+
+    try {
+      const begun = await beginExportSelectionRaw();
+      if (!begun || !begun.ok) {
+        const err = begun && begun.error;
+        openExportModalError(
+          err === "no_session"
+            ? "当前不在会话页。请打开具体聊天后再导出。"
+            : err === "no_share_api"
+              ? "未能接入页面分享选对话。请刷新后重试，或确认 DeepSeek 页面已加载完成。"
+              : "无法进入选对话，请刷新后重试。"
+        );
+        return;
+      }
+      exportFlow.hijack = true;
+      exportFlow.seenSelecting = false;
+      document.documentElement.classList.add("dspicker-export-hijack");
+      startExportHijackWatchers();
+      [50, 200, 500].forEach((ms) => window.setTimeout(patchNativeShareBar, ms));
+    } catch (_) {
+      exportFlow.hijack = false;
+      document.documentElement.classList.remove("dspicker-export-hijack");
+      openExportModalError("进入选对话超时，请刷新页面后重试。");
+    }
   }
 
   function ensureExportModal() {
@@ -311,7 +634,22 @@
     exportModalEl.hidden = true;
   }
 
-  async function openExportModal() {
+  function openExportModalError(message) {
+    const root = ensureExportModal();
+    const state = root.__dspExportState;
+    const body = root.querySelector(".dspicker-body");
+    const thinkCb = root.querySelector('[data-action="include-think"]');
+    const status = root.querySelector(".dspicker-status");
+    status.hidden = true;
+    thinkCb.checked = false;
+    state.includeThink = false;
+    state.payload = null;
+    state.markdown = message;
+    body.textContent = state.markdown;
+    root.hidden = false;
+  }
+
+  function openExportModal(payload) {
     const root = ensureExportModal();
     const state = root.__dspExportState;
     const body = root.querySelector(".dspicker-body");
@@ -323,33 +661,14 @@
 
     state.includeThink = false;
     thinkCb.checked = false;
-    state.payload = null;
-    state.markdown = "正在读取会话…";
+    state.payload = payload && payload.ok ? payload : null;
+    if (!state.payload || !state.payload.messages || !state.payload.messages.length) {
+      state.markdown = "没有可导出的消息。";
+    } else {
+      state.markdown = buildExportMarkdown(state.payload, state.includeThink);
+    }
     body.textContent = state.markdown;
     root.hidden = false;
-
-    try {
-      const result = await exportSessionRaw();
-      state.payload = result;
-      if (!result || !result.ok) {
-        const err = result && result.error;
-        if (err === "no_session") {
-          state.markdown = "当前不在会话页。请打开具体聊天后再导出。";
-        } else if (err === "empty") {
-          state.markdown = "当前会话没有可导出的消息。";
-        } else {
-          state.markdown =
-            "未从页面内存读到会话。请确认对话已加载完整，或刷新后重试。";
-        }
-      } else {
-        state.markdown = buildExportMarkdown(result, state.includeThink);
-      }
-    } catch (_) {
-      state.payload = null;
-      state.markdown = "导出会话超时，请刷新页面后重试。";
-    }
-
-    body.textContent = state.markdown;
   }
 
   function isAssistantItem(item) {
@@ -423,7 +742,7 @@
       "dspicker-export-trigger",
       "导出会话",
       createExportIconSvg(),
-      () => openExportModal()
+      () => startExportSelection()
     );
   }
 
@@ -448,12 +767,7 @@
       });
   }
 
-  function placePickerButtons(container, exportBtn, rawBtn, beforeNode) {
-    if (beforeNode && beforeNode.parentElement === container) {
-      container.insertBefore(exportBtn, beforeNode);
-      container.insertBefore(rawBtn, beforeNode);
-      return;
-    }
+  function placePickerButtons(container, exportBtn, rawBtn) {
     container.appendChild(exportBtn);
     container.appendChild(rawBtn);
   }
@@ -521,11 +835,10 @@
 
   function scanAndAttach() {
     document
-      .querySelectorAll(".dspicker-export-fab, .dspicker-export-inline")
-      .forEach((el) => el.remove());
-    document
       .querySelectorAll("[data-virtual-list-item-key]")
-      .forEach((el) => attachButton(el));
+      .forEach((el) => {
+        attachButton(el);
+      });
   }
 
   const observer = new MutationObserver((mutations) => {
@@ -552,6 +865,10 @@
     });
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      if (exportFlow.hijack) {
+        stopExportHijack();
+        return;
+      }
       if (exportModalEl && !exportModalEl.hidden) {
         closeExportModal();
         return;
