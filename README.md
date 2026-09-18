@@ -1,8 +1,14 @@
 # DeepSeek Text Picker
 
+<img src="extension/icons/icon128.png" width="64" alt="DeepSeek Text Picker">
+
 Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek.com) 的回答旁显示「原文」图标，展示与官方「复制」一致的 Markdown；并可导出当前会话整段对话。
 
 ## 使用
+
+![使用演示](docs/demo.gif)
+
+![显示原文弹层](docs/screenshot.png)
 
 在 DeepSeek 的回答底部：
 
@@ -44,6 +50,9 @@ Chrome / Edge 扩展（v0.2.0）：在 [chat.deepseek.com](https://chat.deepseek
 ## 目录
 
 ```
+docs/
+  demo.gif        # README 使用演示（动图）
+  screenshot.png  # README 截图：显示原文弹层
 extension/
   manifest.json
   inject.js       # MAIN world：读取页面本地 store

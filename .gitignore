@@ -4,6 +4,8 @@
 # Local scratch
 temp/
 dist/
+# 原始录屏（体积大）；README 用 docs/demo.gif
+/*.gif
 
 # Env & secrets
 .env
